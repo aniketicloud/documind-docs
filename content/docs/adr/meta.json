@@ -1,0 +1,12 @@
+{
+  "title": "ADR",
+  "pages": [
+    "0001-record-architecture-decisions",
+    "0002-better-auth",
+    "0003-presigned-uploads-rustfs",
+    "0004-multi-chat",
+    "0005-document-allowlist",
+    "0006-redis-protected-mode",
+    "0007-no-parse-on-upload"
+  ]
+}

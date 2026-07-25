@@ -1,0 +1,38 @@
+---
+title: Data model
+description: Postgres tables used by Documind.
+---
+
+## Auth (Better Auth)
+
+- `user`  
+- `session`  
+- `account`  
+- `verification`  
+
+## Documents
+
+`documents`
+
+| Column | Notes |
+|--------|--------|
+| `id` | UUID text |
+| `user_id` | Owner FK |
+| `name` | Original filename |
+| `key` | S3 object key |
+| `content_type`, `size` | Metadata |
+| `status` | `pending` \| `ready` \| `failed` |
+
+## Chat
+
+`chats` — conversation headers (`title`, `user_id`, timestamps)
+
+`chat_messages` — `role` (`user` \| `assistant`), `content`, `chat_id`
+
+`chat_message_documents` — many-to-many message ↔ document
+
+Deleting a chat cascades messages and join rows; **documents remain**.
+
+## Migrations
+
+SQL under `drizzle/`; generate with `npm run db:generate`, apply with push/migrate.

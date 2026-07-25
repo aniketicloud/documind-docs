@@ -1,0 +1,44 @@
+---
+title: API reference
+description: HTTP route handlers in the Documind app.
+---
+
+All app APIs below expect an authenticated session unless noted.
+
+## Auth
+
+| Method | Path | Notes |
+|--------|------|--------|
+| * | `/api/auth/*` | Better Auth handler |
+
+## Documents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/documents` | List current user’s documents (`?status=`) |
+| `POST` | `/api/documents/presign` | Create pending row + presigned PUT |
+| `POST` | `/api/documents/confirm` | Mark ready after upload |
+| `GET` | `/api/documents/:id` | Metadata (owner) |
+| `DELETE` | `/api/documents/:id` | Delete object + row |
+| `GET` | `/api/documents/:id/download` | Presigned GET URL |
+
+## Chats
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/chats` | List chats |
+| `POST` | `/api/chats` | Create chat + first messages |
+| `GET` | `/api/chats/:id` | Chat + messages |
+| `PATCH` | `/api/chats/:id` | Rename |
+| `DELETE` | `/api/chats/:id` | Delete chat + messages |
+| `POST` | `/api/chats/:id/messages` | Append user + placeholder assistant |
+
+## Redis demo
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/redis` | List `documind:kv:*` |
+| `POST` | `/api/redis` | Create string key |
+| `GET` | `/api/redis/:key` | Read |
+| `PUT` | `/api/redis/:key` | Update |
+| `DELETE` | `/api/redis/:key` | Delete |

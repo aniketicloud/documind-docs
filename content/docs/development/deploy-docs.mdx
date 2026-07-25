@@ -1,0 +1,32 @@
+---
+title: Deploying documentation
+description: Deploy documind-docs to Vercel.
+---
+
+## Recommended: Vercel
+
+1. Push `documind-docs` to a GitHub remote (create repo when ready).  
+2. Import the project in [Vercel](https://vercel.com).  
+3. Framework preset: **Next.js**.  
+4. Build command: `npm run build`  
+5. Output: default Next.  
+6. Assign a domain, e.g. `docs.yourdomain.com` or `*.vercel.app`.  
+
+No Documind `DATABASE_URL` or S3 secrets are required for this site.
+
+## Local preview of production build
+
+```bash
+npm run build
+npm run start
+```
+
+## Linking from the app README
+
+In `documind/README.md`, point “Documentation” at the public Vercel URL once live.
+
+## Optional later
+
+- PR previews on Vercel  
+- Custom domain + HTTPS  
+- Search already works via Orama (`/api/search`) in this Fumadocs setup  

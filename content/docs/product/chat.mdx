@@ -1,0 +1,37 @@
+---
+title: Chat
+description: Multi-chat UX and behavior.
+---
+
+## Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/new` | Empty composer; no chat row until first send |
+| `/c/[id]` | Existing conversation |
+| `/documind` | Legacy redirect → `/new` |
+
+## Creating a chat
+
+1. User types and/or attaches ready documents  
+2. **Send** calls `POST /api/chats`  
+3. Server creates `chats` + user message + placeholder assistant message  
+4. Title auto-generated from first message or first file name  
+5. Client navigates to `/c/{id}`  
+6. Double-submit is blocked with a sync lock while creating  
+
+## Continuing a chat
+
+- `POST /api/chats/:id/messages` with optional `documentIds`  
+- Another placeholder assistant reply is stored  
+
+## Sidebar
+
+- **New chat**, **My documents**, **Redis demo**  
+- **Recent** list (owner only)  
+- Actions: rename, delete  
+- Delete removes chat + messages; **documents stay** in storage  
+
+## UI building blocks
+
+MessageScroller, Message, Bubble, Attachment, Marker (shadcn chat components).

@@ -1,0 +1,21 @@
+---
+title: "ADR-0007: No document parsing on upload"
+description: Defer text extraction and RAG to async workers.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+Parsing PDF/Office on the upload request path blocks UX and does not scale. Qdrant is available for later embeddings.
+
+## Decision
+
+Upload only stores objects + metadata. Parsing/chunking/embedding will be an async pipeline (e.g. Redis jobs + specialized extractors) when chat-with-doc is implemented.
+
+## Consequences
+
+- Pros: reliable uploads today  
+- Cons: assistant cannot yet use file contents  

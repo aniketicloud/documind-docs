@@ -1,0 +1,45 @@
+---
+title: Documents
+description: Upload, ownership, and allowed file types.
+---
+
+## User surfaces
+
+- **My documents** (`/documents`) — upload, list, download, delete  
+- **Chat composer** — paperclip (upload now) and library picker (ready docs)  
+
+## Upload pipeline
+
+1. `POST /api/documents/presign` — validate type/size, insert `pending` row, return presigned **PUT** URL  
+2. Browser **PUT**s file to RustFS  
+3. `POST /api/documents/confirm` — HEAD object, mark `ready`  
+
+Keys look like:
+
+```text
+users/{userId}/{documentId}/{safeFilename}
+```
+
+## Allowed types
+
+Defined in `lib/document-types.ts`:
+
+- PDF: `.pdf`  
+- Word: `.doc`, `.docx`  
+- Excel: `.xls`, `.xlsx`, `.csv`  
+- Text: `.txt`, `.md`, `.markdown`, `.rtf`  
+- OpenDocument: `.odt`, `.ods`  
+
+Max size: **50MB**. Images/audio/video/executables rejected.
+
+## Security
+
+- List/get/download/delete always filter by **session user id**  
+- Other users get **404** (no existence leak)  
+- Storage keys are not returned to the client on presign  
+- Download uses short-lived presigned GET after ownership check  
+
+## Parsing / RAG
+
+Not implemented. Upload stores bytes only. Future: async extract → chunk → Qdrant.  
+See architecture docs for the planned approach.

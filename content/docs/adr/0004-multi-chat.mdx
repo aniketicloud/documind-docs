@@ -1,0 +1,21 @@
+---
+title: "ADR-0004: Multi-chat conversation model"
+description: Multiple chats per user with /new and /c/[id].
+---
+
+## Status
+
+Accepted
+
+## Context
+
+A single chat thread does not match ChatGPT/Claude UX. Users need history and parallel conversations.
+
+## Decision
+
+Persist `chats` + `chat_messages` (+ message-document links). `/new` creates a chat on first send; `/c/[id]` resumes. Sidebar shows recent chats with rename/delete.
+
+## Consequences
+
+- Pros: familiar UX, clear ownership  
+- Cons: more schema and UI complexity; double-submit protection required on create  

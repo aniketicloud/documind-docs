@@ -1,0 +1,16 @@
+{
+  "title": "Documind",
+  "pages": [
+    "index",
+    "---Guide---",
+    "...guide",
+    "---Product---",
+    "...product",
+    "---Architecture---",
+    "...architecture",
+    "---Development---",
+    "...development",
+    "---ADR---",
+    "...adr"
+  ]
+}

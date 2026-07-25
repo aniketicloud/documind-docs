@@ -1,0 +1,21 @@
+---
+title: "ADR-0006: Redis protected-mode off for local Docker"
+description: Allow host Node clients to reach Redis via published ports.
+---
+
+## Status
+
+Accepted (local development)
+
+## Context
+
+Docker-published Redis appears non-loopback to Redis. With protected mode and no password, host connections are **DENIED**, which surfaces as ioredis max-retries errors.
+
+## Decision
+
+Run local Redis with `--protected-mode no` in compose. Prefer `REDIS_URL=redis://127.0.0.1:6379`.
+
+## Consequences
+
+- Pros: local demo and future queues work  
+- Cons: **not** suitable as a public internet bind without AUTH/TLS  

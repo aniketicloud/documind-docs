@@ -1,0 +1,45 @@
+---
+title: Environment variables
+description: Configuration for the Documind application (.env).
+---
+
+Copy `example.env` to `.env` in the **documind** app root.
+
+## Database
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `POSTGRES_USER` | `documind` | Compose Postgres user |
+| `POSTGRES_PASSWORD` | `password` | Compose password |
+| `POSTGRES_DB` | `documind` | Database name |
+| `DATABASE_URL` | `postgresql://documind:password@localhost:5433/documind` | Drizzle / app connection |
+
+## Auth (Better Auth)
+
+| Variable | Purpose |
+|----------|---------|
+| `BETTER_AUTH_SECRET` | Session signing secret (long random string) |
+| `BETTER_AUTH_URL` | Public app URL, e.g. `http://localhost:3000` |
+
+## Object storage (RustFS / S3)
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `S3_ENDPOINT` | `http://localhost:9000` | S3 API endpoint |
+| `S3_ACCESS_KEY` | `rustfsadmin` | Access key |
+| `S3_SECRET_KEY` | `rustfsadmin` | Secret key |
+| `S3_BUCKET` | `documind` | Bucket (created on first use) |
+| `S3_REGION` | `us-east-1` | Region (S3 SDK) |
+| `S3_CORS_ORIGIN` | `http://localhost:3000` | Browser CORS origin for presigned PUT |
+
+## Redis
+
+| Variable | Example |
+|----------|---------|
+| `REDIS_URL` | `redis://127.0.0.1:6379` |
+
+Prefer **`127.0.0.1`** over `localhost` on Windows (IPv6 issues).
+
+## Docs site
+
+This Fumadocs project does **not** need Documind’s database or S3 env vars for local viewing.

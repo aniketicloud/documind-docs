@@ -1,0 +1,10 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "overview",
+    "data-model",
+    "api",
+    "security",
+    "storage"
+  ]
+}

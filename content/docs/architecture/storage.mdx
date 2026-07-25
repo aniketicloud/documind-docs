@@ -1,0 +1,31 @@
+---
+title: Storage (RustFS)
+description: S3-compatible object storage integration.
+---
+
+## Role
+
+RustFS stores document **bytes**. Postgres stores **metadata** and ownership.
+
+## Client configuration
+
+`lib/s3.ts`:
+
+- Path-style addressing (`forcePathStyle: true`)  
+- Endpoint from `S3_ENDPOINT`  
+- `ensureBucket()` creates bucket + CORS  
+- Presign PUT for upload, GET for download, DELETE for removal  
+
+## Flow
+
+```text
+presign → browser PUT → confirm (HEAD) → status ready
+```
+
+## Failure modes
+
+- Confirm without object → `failed`  
+- CORS misconfig → browser PUT fails  
+- Wrong `REDIS_URL` / S3 endpoint → 500s on API  
+
+See ADR on presigned uploads.

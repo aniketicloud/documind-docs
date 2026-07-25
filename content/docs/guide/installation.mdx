@@ -1,0 +1,68 @@
+---
+title: Installation
+description: Install Documind dependencies and required services.
+---
+
+## Application
+
+```bash
+cd documind
+npm install
+```
+
+Scripts of interest:
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Next.js dev server (port 3000) |
+| `npm run build` / `start` | Production |
+| `npm run db:generate` | Generate Drizzle migrations |
+| `npm run db:push` | Push schema to Postgres |
+| `npm run db:migrate` | Run migrations |
+| `npm run typecheck` | TypeScript |
+
+## Infrastructure (Docker Compose)
+
+From the app root:
+
+```bash
+docker compose up -d
+```
+
+Services defined in `docker-compose.yml`:
+
+| Service | Image / role | Host ports |
+|---------|--------------|------------|
+| `postgres` | PostgreSQL | `5433` → 5432 |
+| `redis` | Redis (AOF, protected-mode off for local) | `6379` |
+| `rustfs` | S3-compatible object storage | `9000` API, `9001` console |
+| `qdrant` | Vector DB (for future RAG) | `6335`, `6336` |
+
+Stop:
+
+```bash
+docker compose down
+```
+
+## Database schema
+
+Auth tables + app tables (`documents`, `chats`, `chat_messages`, `chat_message_documents`) live in `db/schema.ts` and `db/auth-schema.ts`.
+
+Apply schema:
+
+```bash
+npm run db:push
+# or generate + migrate:
+npm run db:generate
+npm run db:migrate
+```
+
+## Documentation site (this project)
+
+```bash
+cd ../documind-docs
+npm install
+npm run dev
+```
+
+Docs: [http://localhost:3001/docs](http://localhost:3001/docs)

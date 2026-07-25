@@ -1,0 +1,31 @@
+---
+title: Security
+description: AuthN/AuthZ and isolation patterns.
+---
+
+## Authentication
+
+- Cookie sessions via Better Auth  
+- Protected layout and `requireSession()` on APIs  
+
+## Authorization
+
+- Documents and chats always scoped by `session.user.id`  
+- Cross-user IDs return **404**, not 403 (avoid leaking existence)  
+- Object keys include `users/{userId}/...`; confirmed with `isKeyOwnedByUser`  
+
+## Uploads
+
+- Presigned PUT limited by server-chosen key and content type  
+- Client cannot choose another user’s prefix  
+- CORS restricted to configured app origin  
+
+## Secrets
+
+- Never commit `.env`  
+- Rotate `BETTER_AUTH_SECRET` and S3 keys in production  
+- Local RustFS credentials are defaults for dev only  
+
+## Redis / Docker
+
+- Local Redis uses protected-mode **off** for host access — **do not** expose that config to the public internet without auth  

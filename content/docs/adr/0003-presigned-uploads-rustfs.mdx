@@ -1,0 +1,21 @@
+---
+title: "ADR-0003: Presigned uploads to RustFS"
+description: Browser uploads directly to S3-compatible storage.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+Documents must be stored durably. Proxying large files through Next.js increases load and timeouts.
+
+## Decision
+
+Use **presigned PUT** URLs (AWS SDK + RustFS). Metadata and ownership stay in Postgres. Confirm with HEAD after upload.
+
+## Consequences
+
+- Pros: scalable uploads, simple app servers  
+- Cons: requires CORS and correct endpoint/region configuration  

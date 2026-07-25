@@ -1,0 +1,63 @@
+---
+title: Getting started
+description: Prerequisites and first run of the Documind application.
+---
+
+## Prerequisites
+
+- **Node.js** 20+ (22+ recommended)
+- **npm** (or compatible package manager)
+- **Docker Desktop** (or Docker Engine + Compose) for Postgres, Redis, RustFS, Qdrant
+- Git
+
+## Clone and open the app
+
+```bash
+cd C:\Users\Aniket\Documents\GitHub
+cd documind
+```
+
+## First-time setup
+
+1. Copy environment file:
+
+```bash
+cp example.env .env
+```
+
+2. Start infrastructure:
+
+```bash
+docker compose up -d
+```
+
+3. Install dependencies and push the schema:
+
+```bash
+npm install
+npm run db:push
+```
+
+4. Start the app:
+
+```bash
+npm run dev
+```
+
+5. Open [http://localhost:3000](http://localhost:3000), create an account, and try **New chat**.
+
+## What “done” looks like
+
+| Check | Expected |
+|-------|----------|
+| App | Marketing home + login/signup |
+| After login | Redirect to `/new` |
+| Docker | Postgres `:5433`, Redis `:6379`, RustFS `:9000`/`:9001`, Qdrant `:6335` |
+| Documents | Upload PDF/DOCX/etc. under **My documents** |
+| Redis demo | CRUD on `/redis` |
+
+## Next
+
+- [Installation](/docs/guide/installation) — detailed steps  
+- [Local development](/docs/guide/local-development) — daily workflow  
+- [Environment](/docs/guide/environment) — all env vars  

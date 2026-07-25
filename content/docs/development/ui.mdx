@@ -1,0 +1,27 @@
+---
+title: UI conventions
+description: shadcn and shared UI patterns in Documind.
+---
+
+## Stack
+
+- Tailwind CSS 4  
+- shadcn/ui (Radix Nova, Hugeicons)  
+- `next-themes` for dark/light  
+
+## Shared patterns
+
+| Component | Use |
+|-----------|-----|
+| `Spinner` | Buttons and in-page loading |
+| `Empty` | Empty lists / 404-style content |
+| `AlertDialog` | Confirm delete / rename |
+| `PageLoading` | `loading.tsx` routes |
+| Chat primitives | MessageScroller, Bubble, Attachment, Marker |
+
+## Route UI files (Next.js)
+
+- `loading.tsx` — Suspense fallback  
+- `error.tsx` — error boundary  
+- `global-error.tsx` — root layout errors  
+- `not-found.tsx` — 404  

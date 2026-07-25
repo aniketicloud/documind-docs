@@ -1,0 +1,10 @@
+{
+  "title": "Guide",
+  "pages": [
+    "getting-started",
+    "installation",
+    "local-development",
+    "environment",
+    "docker"
+  ]
+}

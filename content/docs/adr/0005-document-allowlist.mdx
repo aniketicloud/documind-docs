@@ -1,0 +1,21 @@
+---
+title: "ADR-0005: Text document allow-list"
+description: Restrict uploads to text-oriented office formats.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+Chat-with-document product should not accept arbitrary binaries (images, executables, archives).
+
+## Decision
+
+Central allow-list in `lib/document-types.ts` by extension (and MIME heuristics): PDF, Word, Excel, CSV, TXT, Markdown, RTF, ODT/ODS. Max 50MB. Enforced client-side and on presign.
+
+## Consequences
+
+- Pros: safer surface, clearer product scope  
+- Cons: rejects valid edge MIME quirks unless extension is correct  

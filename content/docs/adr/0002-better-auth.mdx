@@ -1,0 +1,21 @@
+---
+title: "ADR-0002: Better Auth for authentication"
+description: Use Better Auth with Drizzle/Postgres.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+Need email/password auth with sessions and a first-class TypeScript/Next integration.
+
+## Decision
+
+Use **Better Auth** with the Drizzle adapter on Postgres (`user`, `session`, `account`, `verification`).
+
+## Consequences
+
+- Pros: modern API, fits App Router, less custom auth code  
+- Cons: couples to Better Auth upgrade cadence  

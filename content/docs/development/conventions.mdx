@@ -1,0 +1,35 @@
+---
+title: Conventions
+description: Contributor guidelines for the Documind app and docs.
+---
+
+## Repositories
+
+| Repo | Purpose |
+|------|---------|
+| `documind` | Product application |
+| `documind-docs` | This documentation site |
+
+Keep them separate. Link across READMEs; do not nest docs inside the app.
+
+## Code style (app)
+
+- TypeScript strict  
+- App Router, server components by default; `"use client"` only when needed  
+- Shared validation in `lib/*` (e.g. `document-types.ts`)  
+- Prefer owner helpers (`getOwnedDocument`, `getOwnedChat`)  
+
+## When changing behavior
+
+1. Implement in `documind`  
+2. Update these docs if user-facing or architectural  
+3. Add/update an ADR for major decisions  
+
+## Commands (docs site)
+
+```bash
+cd documind-docs
+npm run dev      # http://localhost:3001
+npm run build
+npm run start
+```

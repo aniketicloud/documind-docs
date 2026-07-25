@@ -1,0 +1,54 @@
+---
+title: Features
+description: Product capabilities of the Documind application.
+---
+
+## Marketing site
+
+- Public landing page (`/`) with feature/pricing-style sections  
+- Header/footer shell; theme toggle (light/dark)  
+- Signed-in users redirect to **`/new`**
+
+## Authentication
+
+- Sign up / sign in with email and password (Better Auth)  
+- Session cookies; protected app shell under `app/(app)`  
+
+See [Authentication](/docs/product/auth).
+
+## Multi-chat
+
+- **New chat** → `/new` (empty composer)  
+- First send (text and/or documents) creates a chat and navigates to `/c/[id]`  
+- **Recent** sidebar lists chats; active chat highlighted  
+- Rename and delete chats  
+- Assistant replies are **placeholders** (no model yet)
+
+See [Chat](/docs/product/chat).
+
+## Documents
+
+- Upload from **My documents** and from chat  
+- List, download (presigned GET), delete  
+- Owner-only isolation  
+- Allowed types: PDF, Word, Excel, CSV, TXT, Markdown, RTF, ODT/ODS  
+
+See [Documents](/docs/product/documents).
+
+## Settings
+
+- User menu → **Settings** dialog  
+- **General** — name & email (read-only)  
+- **Account** — log out  
+
+See [Settings](/docs/product/settings).
+
+## Redis demo
+
+- Page `/redis` + sidebar link  
+- Create / read / update / delete string keys under `documind:kv:`  
+
+## Dashboard
+
+- Legacy shadcn dashboard demo still exists at `/dashboard`  
+- Not the primary product entry point after multi-chat  

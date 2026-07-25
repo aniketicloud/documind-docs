@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Documind Docs
 
-## Getting Started
+Public documentation site for **[Documind](../documind)** — document intelligence, multi-chat, RustFS uploads, and local infrastructure.
 
-First, run the development server:
+Built with **[Fumadocs](https://fumadocs.dev)** + Next.js 16. Deploy target: **Vercel**.
+
+## Local development
 
 ```bash
+cd documind-docs
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001/docs](http://localhost:3001/docs)  
+(Port **3001** avoids clashing with the app on **3000**.)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Dev server on 3001 |
+| `npm run build` | Production build |
+| `npm run start` | Serve production build on 3001 |
 
-## Learn More
+## Content
 
-To learn more about Next.js, take a look at the following resources:
+Markdown/MDX lives in `content/docs/`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Guide** — getting started, install, env, Docker  
+- **Product** — features, auth, chat, documents, settings  
+- **Architecture** — overview, data model, API, security, storage  
+- **Development** — conventions, UI, deploy  
+- **ADR** — architecture decision records  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy (Vercel)
 
-## Deploy on Vercel
+1. Create a GitHub repo from this folder and push.  
+2. Import into Vercel (Next.js).  
+3. Build: `npm run build` — no app secrets required.  
+4. Point a custom domain if desired (e.g. `docs.example.com`).  
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Related
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Application: sibling folder `../documind`  

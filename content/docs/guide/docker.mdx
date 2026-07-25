@@ -1,0 +1,52 @@
+---
+title: Docker services
+description: Infrastructure services defined in docker-compose.yml.
+---
+
+## Overview
+
+```bash
+docker compose up -d
+docker compose ps
+docker compose logs -f redis
+```
+
+## Postgres
+
+- Host port **5433** (avoids clashing with a local Postgres on 5432)
+- Volume: `pgdata`
+
+## Redis
+
+- Port **6379**
+- AOF enabled
+- **`--protected-mode no`** so the host app can connect via Docker port publish  
+  (Docker NAT is not “loopback” from Redis’s point of view; protected mode would deny Node clients)
+- Volume: `redisdata`
+- Used today for the **Redis demo** API; suitable later as a job queue
+
+## RustFS
+
+- S3-compatible storage: **9000** (API), **9001** (console)
+- Default credentials: `rustfsadmin` / `rustfsadmin`
+- Volume: `rustfs_data`
+- App creates bucket `documind` and sets CORS for browser uploads
+
+## Qdrant
+
+- Ports **6335** (HTTP), **6336**
+- Volume: `qdrant_storage`
+- Reserved for future vector search / RAG (not wired into chat yet)
+
+## Health tips
+
+```bash
+# Redis
+docker compose exec redis redis-cli PING
+
+# From host Node
+# redis://127.0.0.1:6379
+
+# RustFS console
+# http://localhost:9001
+```

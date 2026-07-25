@@ -1,0 +1,48 @@
+---
+title: Local development
+description: Day-to-day workflow for Documind.
+---
+
+## Recommended terminals
+
+1. **Docker** — keep compose running  
+2. **App** — `npm run dev` in `documind`  
+3. **Docs** (optional) — `npm run dev` in `documind-docs` on port **3001**
+
+## Ports cheat sheet
+
+| Port | Service |
+|------|---------|
+| 3000 | Documind Next.js app |
+| 3001 | Documind docs (this site, local) |
+| 5433 | Postgres |
+| 6379 | Redis |
+| 9000 | RustFS S3 API |
+| 9001 | RustFS console (`rustfsadmin` / `rustfsadmin`) |
+| 6335 | Qdrant HTTP |
+
+## Typical feature loop
+
+1. Branch in `documind`  
+2. Change API / UI / schema  
+3. `npm run typecheck`  
+4. Manual test (auth, chat, upload, redis)  
+5. Update docs in `documind-docs` when behavior or env changes  
+
+## UI stack notes
+
+- **shadcn/ui** (Radix Nova style), Tailwind CSS 4  
+- Chat primitives: MessageScroller, Message, Bubble, Attachment, Marker  
+- Shared patterns: Spinner, Empty, AlertDialog  
+
+See [UI conventions](/docs/development/ui).
+
+## Agent / AI coding
+
+`documind/AGENTS.md` reminds agents to read Next.js 16 docs under `node_modules/next/dist/docs/` before changing framework APIs.
+
+## Known gaps (product)
+
+- Assistant messages are **placeholders** (no LLM yet)  
+- No document text parsing / RAG yet (Qdrant is provisioned for later)  
+- Dashboard route still exists but is not the primary UX  

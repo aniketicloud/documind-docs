@@ -1,0 +1,30 @@
+---
+title: Authentication
+description: Better Auth email/password and protected routes.
+---
+
+## Stack
+
+- **Better Auth** with Drizzle adapter (Postgres)  
+- Client: `lib/auth-client.ts`  
+- Server: `lib/auth.ts`  
+- Route handler: `app/api/auth/[...all]/route.ts`  
+
+## User flows
+
+| Flow | Path |
+|------|------|
+| Sign in | `/login` |
+| Sign up | `/signup` |
+| After success | `/new` |
+| Marketing home (signed in) | redirect `/new` |
+
+## Protected UI
+
+`app/(app)/layout.tsx` loads the session; missing session → redirect `/login`.
+
+API routes use `requireSession()` from `lib/session.ts` and return **401** when unauthenticated.
+
+## Tables
+
+Managed via Better Auth + Drizzle: `user`, `session`, `account`, `verification`.

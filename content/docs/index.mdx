@@ -1,0 +1,52 @@
+---
+title: Documind Documentation
+description: Official documentation for Documind — document intelligence, multi-chat, storage, and local development.
+---
+
+# Documind
+
+**Documind** is a Next.js application for document-centric chat: sign in, upload text documents (PDF, Word, Excel, Markdown, etc.) to S3-compatible storage (RustFS), manage files, and hold multiple conversations with document attachments.
+
+This site documents the **application repository** (`documind`), not this docs package itself.
+
+## What you can do in the app
+
+- **Auth** — email/password via Better Auth
+- **Multi-chat** — `/new` starts a chat; `/c/[id]` continues it; history in the sidebar
+- **Documents** — upload, list, download, delete; ownership enforced
+- **Settings** — General (name/email) and Account (logout)
+- **Redis demo** — simple key/value CRUD against Docker Redis
+- **Infrastructure** — Postgres, Redis, RustFS, Qdrant (compose)
+
+## Docs map
+
+| Section | Contents |
+|--------|----------|
+| [Guide](/docs/guide/getting-started) | Install, env, Docker, local dev |
+| [Product](/docs/product/features) | Features and user flows |
+| [Architecture](/docs/architecture/overview) | System design, data model, API |
+| [Development](/docs/development/conventions) | Conventions for contributors |
+| [ADR](/docs/adr/0001-record-architecture-decisions) | Architecture decision records |
+
+## Related repos
+
+| Path | Role |
+|------|------|
+| `../documind` | Main application (Next.js 16) |
+| `documind-docs` (this repo) | Public documentation site (Fumadocs) |
+
+## Quick start (app)
+
+```bash
+cd ../documind
+cp example.env .env
+docker compose up -d
+npm install
+npm run db:push
+npm run dev
+```
+
+App: [http://localhost:3000](http://localhost:3000)  
+These docs (local): [http://localhost:3001/docs](http://localhost:3001/docs)
+
+Continue with [Getting started](/docs/guide/getting-started).
