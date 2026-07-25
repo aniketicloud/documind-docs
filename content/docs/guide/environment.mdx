@@ -34,12 +34,50 @@ Copy `example.env` to `.env` in the **documind** app root.
 
 ## Redis
 
-| Variable | Example |
-|----------|---------|
-| `REDIS_URL` | `redis://127.0.0.1:6379` |
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `REDIS_URL` | `redis://127.0.0.1:6379` | Demo KV API + **ingest job queue** |
 
 Prefer **`127.0.0.1`** over `localhost` on Windows (IPv6 issues).
 
+Optional worker knobs:
+
+| Variable | Purpose |
+|----------|---------|
+| `INGEST_WORKER_ID` | Worker identity for job locks |
+| `INGEST_POLL_MS` | Sleep between empty polls (default ~1500) |
+| `INGEST_MAX_CHARS` | Cap extracted text size before chunking |
+
+## Chat providers (model selector)
+
+Composer model dropdown lists providers that have keys configured.
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `ZAI_API_KEY` | *(secret)* | Z.AI / GLM chat (OpenAI-compatible) |
+| `ZAI_BASE_URL` | `https://api.z.ai/api/paas/v4` | Z.AI API base (no trailing slash required) |
+| `GEMINI_API_KEY` | *(secret)* | Gemini **Interactions** chat + **embeddings** for RAG |
+| `GEMINI_CHAT_MODEL` | `gemini-3.1-flash-lite` | Interactions chat model id |
+| `GEMINI_EMBED_MODEL` | `gemini-embedding-2` | Embedding model (not legacy `text-embedding-004`) |
+| `GEMINI_EMBED_DIMENSIONS` | `768` | Vector size for Qdrant (768 / 1536 / 3072) |
+| `DEFAULT_CHAT_MODEL` | `glm-4.7-flash` | Server default when client omits `modelId` |
+
+Selectable catalog models: `glm-4.7-flash` (Z.AI), `gemini-3.1-flash-lite` (Gemini Interactions API via `@google/genai`).  
+
+**No legacy `generateContent` / `@google/generative-ai`.** Chat uses `interactions.create` with `store: false`.
+
+**Never commit real API keys.** Put them only in local `.env`. If a key is pasted into chat or logs, rotate it.
+
+Note: embeddings are Gemini-only (`gemini-embedding-2`). Changing embed model/dims recreates the Qdrant collection — **re-run ingest** for all docs.
+## Qdrant
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `QDRANT_URL` | `http://127.0.0.1:6335` | Host port mapped from container `6333` |
+| `QDRANT_COLLECTION` | `documind_chunks` | Vector collection name |
+
+Required for ingest embeddings and chat retrieval. Start with `docker compose up -d`.
+
 ## Docs site
 
-This Fumadocs project does **not** need Documind’s database or S3 env vars for local viewing.
+This Fumadocs project does **not** need Documind’s database, S3, Gemini, or Qdrant env vars for local viewing.

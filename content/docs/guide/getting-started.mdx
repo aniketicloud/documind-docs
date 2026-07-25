@@ -19,11 +19,13 @@ cd documind
 
 ## First-time setup
 
-1. Copy environment file:
+1. Copy environment file and set secrets:
 
 ```bash
 cp example.env .env
 ```
+
+Edit `.env`: set `BETTER_AUTH_SECRET` and **`GEMINI_API_KEY`** (Google AI Studio). Never commit real keys.
 
 2. Start infrastructure:
 
@@ -38,10 +40,14 @@ npm install
 npm run db:push
 ```
 
-4. Start the app:
+4. Start the app **and** the ingest worker (two terminals):
 
 ```bash
 npm run dev
+```
+
+```bash
+npm run worker:ingest
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000), create an account, and try **New chat**.
@@ -53,8 +59,16 @@ npm run dev
 | App | Marketing home + login/signup |
 | After login | Redirect to `/new` |
 | Docker | Postgres `:5433`, Redis `:6379`, RustFS `:9000`/`:9001`, Qdrant `:6335` |
-| Documents | Upload PDF/DOCX/etc. under **My documents** |
+| Documents | Upload a `.txt` under **My documents** → status **`indexed`** |
+| Chat | Attach that indexed file → ask a question → **streamed** answer |
 | Redis demo | CRUD on `/redis` |
+
+## Why two Node processes?
+
+- **`npm run dev`** — UI and APIs (including streaming chat)  
+- **`npm run worker:ingest`** — background extract/embed into Qdrant  
+
+Without the worker, files never become RAG-ready. Details: [Document ingest](/docs/guide/document-ingest) · [RAG chat](/docs/guide/rag-chat).
 
 ## Next
 

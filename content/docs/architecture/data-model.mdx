@@ -21,7 +21,14 @@ description: Postgres tables used by Documind.
 | `name` | Original filename |
 | `key` | S3 object key |
 | `content_type`, `size` | Metadata |
-| `status` | `pending` \| `ready` \| `failed` |
+| `status` | `pending` \| `ready` \| `processing` \| `indexed` \| `failed` |
+| `error_message` | Last ingest / pipeline error (if any) |
+| `processed_at` | When ingest last succeeded |
+| `ingest_attempts` | Worker attempt counter |
+
+### Ingest jobs
+
+`document_jobs` — async work items (`queued` / `running` / `succeeded` / `failed`), attempts, locks, last error.
 
 ## Chat
 
@@ -29,9 +36,16 @@ description: Postgres tables used by Documind.
 
 `chat_messages` — `role` (`user` \| `assistant`), `content`, `chat_id`
 
-`chat_message_documents` — many-to-many message ↔ document
+`chat_message_documents` — many-to-many message ↔ document (defines **this-turn** RAG scope)
 
 Deleting a chat cascades messages and join rows; **documents remain**.
+
+## Vectors (not in Postgres)
+
+Qdrant collection (default `documind_chunks`): points with **768-d** vectors from **`gemini-embedding-2`** (configurable via `GEMINI_EMBED_DIMENSIONS`) and payload  
+`{ userId, documentId, documentName, chunkIndex, text }`.
+
+If you change embed model or dimensions, re-ingest documents. Plain-language guide: [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant).
 
 ## Migrations
 

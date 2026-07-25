@@ -1,136 +1,138 @@
 ---
-title: Document ingest (Option A)
-description: What ingest means, what the worker does, why it exists, and how to test it — without jargon overload.
+title: Document ingest
+description: What ingest means, what the worker does, why it is separate from upload, and how it feeds RAG.
 ---
 
 # Document ingest explained
 
-This page explains **what we built in “Option A”** and why you need a separate command `npm run worker:ingest`. If chat chips only show “uploaded” but **My documents** shows `processing` → `indexed`, this is why.
+This page explains **what ingest is**, **why it exists**, and how it connects to chat. Upload chips only show “stored”; **My documents** shows `processing` → `indexed`.
+
+For grounded answers (Gemini + Qdrant + streaming), see **[RAG chat (B2 + B3)](/docs/guide/rag-chat)**.
 
 ---
 
 ## The simple picture
 
-Think of three separate steps when you add a file:
-
 ```text
 1. UPLOAD     →  “Save the file somewhere safe”
-2. INGEST     →  “Prepare that file for future intelligence features”
-3. CHAT / AI  →  “Answer questions using the prepared content”  (not built yet)
+2. INGEST     →  “Prepare that file for search / AI”
+3. CHAT / AI  →  “Answer questions using prepared content”
 ```
 
 | Step | What the user sees | What the system does |
 |------|--------------------|----------------------|
-| **Upload** | Progress / “done” chip in chat; file appears in My documents | Browser puts the file in **RustFS** (S3 storage). Postgres stores name, owner, path. |
-| **Ingest** | Status badge: `processing` → `indexed` (on **My documents**) | A **background worker** checks the file is readable and marks it ready for later AI work. |
-| **Chat with docs** | Real answers from the file | Parse text, search, LLM — **not in this stage** |
+| **Upload** | Progress / “done” chip in chat; file on My documents | Browser puts the file in **RustFS**. Postgres stores name, owner, path. |
+| **Ingest** | Badge: `processing` → `indexed` (My documents) | **Background worker** downloads the object, extracts text when possible, embeds, upserts **Qdrant**, updates status. |
+| **Chat with docs** | Streaming answers | Retrieval + Gemini — only for **indexed** docs **attached on that turn**. |
 
-**Ingest** is step 2. It is **not** the same as upload, and it is **not** yet “AI reading your PDF.”
-
----
-
-## What “ingest” means here
-
-**Ingest** = a **background job** that runs **after** the file is successfully stored.
-
-In Option A (current stage), ingest is intentionally **small**:
-
-1. Take a job for a document  
-2. Download the object from RustFS (server credentials)  
-3. Verify the object is not empty  
-4. For simple text files (`.txt`, `.md`, `.csv`), check UTF-8 content is not empty  
-5. Mark the document **`indexed`** if OK, or **`failed`** if not  
-
-It does **not** yet:
-
-- Fully parse PDF / Word / Excel into searchable text  
-- Create embeddings  
-- Put anything in Qdrant  
-- Change what the chat assistant says (still a **placeholder** reply)
-
-So if you ask “what did we achieve?”:
-
-> We built a **reliable pipeline** so every uploaded file can be processed **asynchronously**, with clear statuses and retries — the foundation for “chat with my documents” later.
+**Ingest is not upload.** Upload finishes when bytes are in storage. Ingest finishes when the pipeline has prepared (or failed) the file for RAG.
 
 ---
 
-## Why not do this during upload?
+## What we built (history)
 
-When you click upload (or attach in chat), the browser:
+### Option A — foundation
+
+We first shipped a **reliable async pipeline** without full AI:
+
+- Job rows (`document_jobs`) + Redis list queue  
+- Separate process `npm run worker:ingest`  
+- Statuses: `processing` | `indexed` | `failed`  
+- My documents badges + **Retry ingest**  
+
+**Why A first:** prove enqueue → claim → succeed/fail/retry without blocking the browser. That is the spine everything else hangs on.
+
+### Option B2 — intelligence inside the same worker
+
+The **same worker** now does real prep for text files:
+
+1. Download object from RustFS  
+2. Extract plain text (`.txt` / `.md` / `.csv`)  
+3. Chunk with overlap  
+4. Embed with **Gemini**  
+5. Upsert **Qdrant** points (with `userId` + `documentId`)  
+6. Mark **`indexed`** or **`failed`**
+
+**Why inside the worker (not on upload):** large files and embedding rate limits can take seconds–minutes. ADR-0007: keep upload fast.
+
+**Why not PDF yet:** binary parsers are a separate investment (Option **F**). Text files prove upload → vectors → answers end-to-end.
+
+---
+
+## Why not do ingest during upload?
+
+When you attach or upload, the browser:
 
 1. Asks the app for a **presigned URL**  
-2. **Uploads the file directly to RustFS**  
-3. Calls **confirm** so the app marks the file as stored  
+2. **Uploads directly to RustFS**  
+3. Calls **confirm** so the app marks storage OK and **enqueues** a job  
 
-That path must stay **fast and reliable**. Heavy work (PDF parsing, OCR, embeddings) can take **seconds to minutes**. If we did that inside the upload API:
+That path must stay **fast and reliable**. If we embedded or parsed PDF inside confirm:
 
 - The browser would hang  
-- Timeouts and failed uploads would increase  
-- The Next.js server would be busy with CPU work instead of serving the UI  
-
-So we split:
+- Timeouts would rise  
+- Next.js would burn CPU on request threads  
 
 ```text
-Upload request  →  only “file is in storage”
-Worker process  →  “prepare / validate for later AI”
+Upload request  →  only “file is in storage” (+ enqueue job)
+Worker process  →  “extract / embed / index for AI”
 ```
-
-That split is **Option A**.
 
 ---
 
 ## What `npm run worker:ingest` does
 
-The app (`npm run dev`) and the **worker** are **two different programs**.
-
 | Process | Command | Role |
 |---------|---------|------|
-| **Web app** | `npm run dev` | UI, auth, APIs, create jobs when upload confirms |
-| **Ingest worker** | `npm run worker:ingest` | Long-running loop that **claims jobs** and processes documents |
+| **Web app** | `npm run dev` | UI, auth, APIs, create jobs on confirm |
+| **Ingest worker** | `npm run worker:ingest` | Claims jobs; extract → embed → Qdrant |
 
-### Worker loop (plain language)
+### Worker loop
 
 ```text
 forever:
-  1. Ask Redis/Postgres: “Is there an ingest job waiting?”
-  2. If none → sleep ~1.5s → try again
-  3. If yes → mark job “running”
-  4. Load document metadata (owner, S3 key)
-  5. Download file from RustFS
-  6. Run Option A checks (readable / not empty)
-  7. Mark document indexed OR failed
-  8. Go back to step 1
+  1. Claim next job (Redis pop, or Postgres queued/stale)
+  2. Load document (owner, S3 key)
+  3. Download bytes from RustFS
+  4. Extract text if type supported
+  5. If text: chunk → embed → upsert Qdrant
+  6. Mark document indexed OR failed (retry until max attempts)
+  7. Loop
 ```
 
 If you **never** start the worker:
 
-- Uploads still succeed (file is in RustFS)  
-- Jobs may sit as **queued** / documents as **processing**  
-- Status **never** becomes **`indexed`**  
-
-So the worker is **required** to complete Option A, just like Docker is required for Postgres.
+- Uploads still succeed  
+- Documents may sit at **`processing`**  
+- Chat library shows **no indexed files**  
+- RAG cannot use those files  
 
 ---
 
-## Document statuses (what the badges mean)
+## Document statuses
 
 | Status | Meaning |
 |--------|---------|
-| **`pending`** | Upload slot created; file not confirmed in storage yet |
-| **`ready`** | File confirmed in RustFS (bytes are there) |
-| **`processing`** | Ingest job is queued or running |
-| **`indexed`** | Ingest finished successfully (pipeline OK for this stage) |
-| **`failed`** | Ingest failed (see error message); can **Retry ingest** |
+| **`pending`** | Presign created; not confirmed in storage |
+| **`ready`** | File confirmed in RustFS (usually brief) |
+| **`processing`** | Ingest job queued or running |
+| **`indexed`** | Ingest succeeded (vectors if text was extractable) |
+| **`failed`** | Ingest failed; use **Retry ingest** |
 
-### Important: chat chip vs My documents
+### Chat chip vs My documents
 
-| Place | What you see after attach/upload |
-|-------|----------------------------------|
-| **Chat attachment chip** | Only **upload** state: uploading → done/error. It does **not** show `processing` / `indexed` today. |
-| **My documents** | Full lifecycle badges + polling + **Retry ingest**. **This is where you verify Option A.** |
+| Place | After attach/upload |
+|-------|---------------------|
+| **Chat attachment chip** | Upload only: uploading → done/error |
+| **My documents** | Full lifecycle + polling + retry |
 
-So: uploading in chat and seeing a normal “file attached” chip is **correct**.  
-To see ingest, open **My documents** (or wait for poll) and watch the badge.
+That split is intentional: chat stays snappy; My documents is the pipeline dashboard.
+
+### What “indexed” means for chat
+
+- **txt/md/csv with content** → searchable in Qdrant → good RAG candidates  
+- **PDF/Word without parsers yet** → may be `indexed` for storage, but **no chunks** → answers cannot quote the file  
+- Prefer text files until Option **F**
 
 ---
 
@@ -144,6 +146,8 @@ sequenceDiagram
   participant DB as Postgres
   participant R as Redis queue
   participant W as worker:ingest
+  participant Q as Qdrant
+  participant G as Gemini
 
   U->>App: Presign upload
   App->>DB: document status=pending
@@ -151,90 +155,81 @@ sequenceDiagram
   U->>S3: PUT file bytes
   U->>App: Confirm upload
   App->>S3: HEAD object exists?
-  App->>DB: status=ready then processing + create job
-  App->>R: push job id
+  App->>DB: status=processing + create job
+  App->>R: push job
   App->>U: OK (upload finished)
 
   Note over W: Separate terminal
   W->>R: pop job
   W->>DB: claim job running
   W->>S3: download object
+  W->>W: extract + chunk
+  W->>G: embed chunks
+  W->>Q: upsert vectors
   W->>DB: status=indexed or failed
 ```
 
 ---
 
-## Why this stage is important
+## Why this design matters
 
-Even though chat is not “smart” yet, Option A is the backbone of Documind’s product direction:
+1. **Foundation for RAG** — chat only works well when ingest filled Qdrant.  
+2. **Retries** — reprocess without re-uploading.  
+3. **Honest UX** — processing vs indexed vs failed.  
+4. **Healthy web app** — heavy work off the request path.  
+5. **Reuse of infra** — Redis + Postgres jobs + RustFS + Qdrant + Gemini.
 
-1. **Foundation for RAG** — later steps (parse → chunk → embed → Qdrant → LLM) plug into this worker and these statuses.  
-2. **Retries** — if processing fails, you can re-run without re-uploading.  
-3. **Honest UX** — users can eventually see “still processing” vs “ready for chat.”  
-4. **Keeps the web app healthy** — heavy work stays off the request path.  
-5. **Uses infra you already have** — Redis queue + Postgres job rows + RustFS download.
-
-Skipping this and jumping straight to “call an LLM” would either:
-
-- ignore the files, or  
-- block uploads on heavy work, or  
-- build one-off scripts that are hard to run in production  
+Skipping the worker and calling an LLM on raw S3 keys would either ignore files, block uploads, or create unmaintainable one-offs.
 
 ---
 
-## How to run and test (checklist)
-
-### Terminals
+## How to run and test
 
 ```bash
-# 1) Infrastructure
+# 1) Infrastructure (includes Qdrant on 6335)
 docker compose up -d
 
-# 2) App
+# 2) App (.env: GEMINI_API_KEY, QDRANT_URL, …)
 npm run dev
 
-# 3) Worker (required for indexed)
+# 3) Worker (required for indexed + embeddings)
 npm run worker:ingest
 ```
 
 ### Happy path
 
-1. Sign in → **My documents**  
-2. **Upload** a small `.txt` or `.md` file with some text  
-3. Badge should move: **processing** → **indexed**  
-4. Worker logs should show `claimed` then `indexed`  
-
-### Upload from chat
-
-1. **New chat** → attach a file → chip shows upload complete  
-2. Open **My documents** → same file should progress to **indexed**  
-3. Chat reply is still a **placeholder** — that is expected  
+1. **My documents** → upload a small `.txt` / `.md`  
+2. Badge: **processing** → **indexed**  
+3. Worker logs: claim + chunk count / success  
+4. **New chat** → pick file under **Indexed documents** → ask a question → streamed answer  
 
 ### Without the worker
 
 1. Stop `worker:ingest`  
-2. Upload a file  
-3. Status may stay **processing**  
-4. Start the worker again (or click **Retry ingest**) → should become **indexed**  
+2. Upload → may stick on **processing**  
+3. Start worker or **Retry ingest** → **indexed**  
 
 ---
 
-## What comes after this stage
+## Stages
 
-| Stage | Goal |
-|-------|------|
-| **A (done)** | Pipeline: queue + worker + statuses |
-| **B** | Parse text + embeddings + Qdrant search |
-| **Then** | Real answers from documents + citations |
-
-Until B, **`indexed` means “ingest pipeline succeeded,” not “AI has fully understood this PDF.”**
+| Stage | Goal | Status |
+|-------|------|--------|
+| **A** | Queue + worker + statuses | Done |
+| **B2+B3** | Text extract → embed → Qdrant → streaming chat | Done |
+| **F** | PDF/DOCX (etc.) parsers | Next product option |
+| **D** | Production hardening | Open |
 
 ---
 
 ## Related pages
 
+- [Embeddings, Qdrant & Gemini stack](/docs/guide/embeddings-and-qdrant) — **what embeddings are**, when to re-ingest  
+- [RAG chat (B2+B3) — what & why](/docs/guide/rag-chat)  
 - [Documents (product)](/docs/product/documents)  
 - [Local development](/docs/guide/local-development)  
 - [Docker services](/docs/guide/docker)  
 - [Roadmap](/docs/development/roadmap)  
 - [ADR-0007: No parse on upload](/docs/adr/0007-no-parse-on-upload)  
+- [ADR-0008: Gemini streaming RAG](/docs/adr/0008-gemini-streaming-rag)  
+- [ADR-0009: Interactions + embedding-2](/docs/adr/0009-gemini-interactions-embedding-2)  

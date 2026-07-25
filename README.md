@@ -1,6 +1,6 @@
 # Documind Docs
 
-Public documentation site for **[Documind](../documind)** — document intelligence, multi-chat, RustFS uploads, and local infrastructure.
+Public documentation site for **[Documind](../documind)** — document intelligence, multi-chat, RustFS uploads, async ingest, Gemini + Qdrant RAG, and local infrastructure.
 
 Built with **[Fumadocs](https://fumadocs.dev)** + Next.js 16. Deploy target: **Vercel**.
 
@@ -27,11 +27,12 @@ Open [http://localhost:3001/docs](http://localhost:3001/docs)
 
 Markdown/MDX lives in `content/docs/`:
 
-- **Guide** — getting started, install, env, Docker  
+- **Guide** — getting started, install, env, Docker, ingest, RAG, **embeddings/Qdrant explained**  
+
 - **Product** — features, auth, chat, documents, settings  
 - **Architecture** — overview, data model, API, security, storage  
-- **Development** — conventions, UI, deploy  
-- **ADR** — architecture decision records  
+- **Development** — conventions, UI, roadmap, deploy  
+- **ADR** — architecture decision records (incl. Gemini streaming RAG)  
 
 ## Deploy (Vercel)
 
@@ -44,7 +45,8 @@ Markdown/MDX lives in `content/docs/`:
 
 See **[ROADMAP.md](./ROADMAP.md)** or  
 [http://localhost:3001/docs/development/roadmap](http://localhost:3001/docs/development/roadmap)  
-for architect-level pending work and option IDs (`Do A`, `Do B2`, …).
+for architect-level status and next option IDs (`Do F`, `Do D`, …).  
+A / B2 / B3 are documented as shipped: [rag-chat](./content/docs/guide/rag-chat.mdx).
 
 ## Related
 

@@ -1,11 +1,11 @@
 ---
 title: Architecture overview
-description: High-level system design of Documind.
+description: High-level system design of Documind after ingest + streaming RAG.
 ---
 
 ## Context
 
-Documind is a **Next.js 16 App Router** monolith: UI, Route Handlers, and server-side integrations in one deployable app. Stateful dependencies run via Docker Compose.
+Documind is a **Next.js 16 App Router** monolith: UI, Route Handlers, and server-side integrations in one deployable app. Stateful dependencies run via Docker Compose. A **separate Node worker** runs document ingest (extract → embed → Qdrant).
 
 ## Diagram
 
@@ -13,10 +13,16 @@ Documind is a **Next.js 16 App Router** monolith: UI, Route Handlers, and server
 flowchart LR
   Browser -->|HTTPS / cookies| Next[Next.js App]
   Next --> PG[(Postgres)]
-  Next --> Redis[(Redis)]
+  Next --> Redis[(Redis queue)]
   Browser -->|Presigned PUT/GET| RustFS[RustFS S3]
   Next -->|S3 SDK| RustFS
-  Next -.->|future| Qdrant[(Qdrant)]
+  Worker[ingest worker] --> PG
+  Worker --> Redis
+  Worker --> RustFS
+  Worker --> Gemini[Gemini embed]
+  Worker --> Qdrant[(Qdrant)]
+  Next --> GeminiChat[Gemini chat stream]
+  Next --> Qdrant
 ```
 
 ## Layers
@@ -25,14 +31,32 @@ flowchart LR
 |-------|----------|----------------|
 | Marketing UI | `app/page.tsx`, marketing components | Public landing |
 | App shell | `app/(app)/*` | Auth layout, sidebar, chat, documents |
-| API | `app/api/*` | Auth, chats, documents, redis |
-| Domain helpers | `lib/*` | Chats, documents, S3, Redis, session |
+| API | `app/api/*` | Auth, chats (incl. stream), documents, redis |
+| Domain helpers | `lib/*` | Chats, documents, S3, Redis, ingest, RAG, Gemini, Qdrant |
+| Worker | `scripts/ingest-worker.ts` | Long-running job loop |
 | Schema | `db/*` | Drizzle models |
 | UI primitives | `components/ui/*` | shadcn |
 
 ## Design principles
 
-1. **Owner-scoped data** — every query joins/filters `userId`  
+1. **Owner-scoped data** — every query filters `userId`; Qdrant search does too  
 2. **Fast uploads** — browser talks to object storage with presigned URLs  
-3. **No heavy work on request path** — parsing/RAG deferred to future workers  
-4. **Docker-local infra** — Postgres, Redis, RustFS, Qdrant  
+3. **No heavy work on the upload request path** — extract/embed in the worker (ADR-0007)  
+4. **Retrieval before generation** — chat embeds the query, searches Qdrant, then streams Gemini  
+5. **Controlled context** — only **indexed** documents **attached on the current turn**  
+6. **Docker-local infra** — Postgres, Redis, RustFS, Qdrant  
+
+## Request vs worker vs chat
+
+| Path | Work allowed |
+|------|----------------|
+| Presign / confirm upload | Validate type/size, HEAD object, enqueue job |
+| `worker:ingest` | Download, parse text, embed, Qdrant upsert |
+| Chat stream API | Embed query, retrieve, stream LLM, save message |
+
+## Related
+
+- [RAG chat guide](/docs/guide/rag-chat)  
+- [Document ingest](/docs/guide/document-ingest)  
+- [API reference](/docs/architecture/api)  
+- [ADR-0008](/docs/adr/0008-gemini-streaming-rag)  

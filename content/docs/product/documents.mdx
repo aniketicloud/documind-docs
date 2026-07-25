@@ -1,18 +1,18 @@
 ---
 title: Documents
-description: Upload, ownership, and allowed file types.
+description: Upload, ownership, ingest lifecycle, and how files become usable in chat.
 ---
 
 ## User surfaces
 
-- **My documents** (`/documents`) — upload, list, download, delete  
-- **Chat composer** — paperclip (upload now) and library picker (ready docs)  
+- **My documents** (`/documents`) — upload, list, download, delete, ingest status, retry  
+- **Chat composer** — paperclip (upload now) and library picker (**indexed** docs for RAG)  
 
 ## Upload pipeline
 
 1. `POST /api/documents/presign` — validate type/size, insert `pending` row, return presigned **PUT** URL  
 2. Browser **PUT**s file to RustFS  
-3. `POST /api/documents/confirm` — HEAD object, mark `ready`  
+3. `POST /api/documents/confirm` — HEAD object, mark ready, **enqueue ingest job**  
 
 Keys look like:
 
@@ -39,16 +39,25 @@ Max size: **50MB**. Images/audio/video/executables rejected.
 - Storage keys are not returned to the client on presign  
 - Download uses short-lived presigned GET after ownership check  
 
-## Ingest (Option A) vs upload
+## Upload vs ingest vs chat
 
-**Upload** stores the file in RustFS. **Ingest** is a background job (`npm run worker:ingest`) that validates the object and marks the document `indexed` (or `failed`).
+| Concept | Meaning |
+|---------|---------|
+| **Upload** | Bytes in RustFS; chat chip “done” |
+| **Ingest** | Worker prepares the file (text extract + embeddings when possible) |
+| **Indexed** | Ingest succeeded; text files can be used for RAG |
+| **Chat attach** | This turn’s `documentIds` for retrieval (must be indexed to contribute chunks) |
 
 - Chat chips only show **upload** progress.  
-- **My documents** shows ingest badges (`processing` → `indexed`).  
+- **My documents** shows ingest badges (`processing` → `indexed` / `failed`).  
 
-Full plain-language guide: [Document ingest (Option A)](/docs/guide/document-ingest).
+**Why split them:** uploads must stay fast; AI prep is slow and retriable. See [Document ingest](/docs/guide/document-ingest).
 
-## Parsing / RAG
+## Parsing / RAG (current)
 
-Not fully implemented. Option A does a light check only (object readable; simple text non-empty).  
-Future: extract → chunk → embed → Qdrant → real chat answers.
+| Type | Ingest behavior |
+|------|-----------------|
+| `.txt`, `.md`, `.csv` | Extract → chunk → Gemini embed → Qdrant |
+| PDF / Word / Excel (binary) | Storage lifecycle may reach `indexed` without vectors until Option **F** |
+
+Chat answers use Gemini over **retrieved chunks** only. Full product explanation: [RAG chat (B2+B3)](/docs/guide/rag-chat).

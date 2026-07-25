@@ -1,0 +1,41 @@
+---
+title: "ADR-0009: Interactions API + gemini-embedding-2"
+description: Leave legacy generateContent; use Interactions chat and modern embeddings.
+---
+
+## Status
+
+Accepted (implemented)
+
+## Context
+
+As of June 2026, Google recommends the **Interactions API** for Gemini chat and labels `generateContent` as legacy.  
+Embedding model **`text-embedding-004`** is shut down; **`gemini-embedding-2`** is the current GA embedding path.  
+Documind was still on `@google/generative-ai` + `generateContentStream` + `text-embedding-004`.
+
+## Decision
+
+1. Depend only on **`@google/genai`**; remove **`@google/generative-ai`**.  
+2. Chat generation for Gemini: **`interactions.create`** with `stream: true`, **`store: false`**, model **`gemini-3.1-flash-lite`** (overridable via `GEMINI_CHAT_MODEL`).  
+3. Embeddings: **`gemini-embedding-2`** with **`outputDimensionality: 768`** (env `GEMINI_EMBED_DIMENSIONS`), retrieval task prefixes on query vs document text.  
+4. Keep **Z.AI** `glm-4.7-flash` in the model selector; default chat model **`glm-4.7-flash`**.  
+5. If Qdrant collection vector size ≠ configured dimensions, **recreate** the collection (forces re-ingest).
+
+## Consequences
+
+### Positive
+
+- Aligned with Google’s 2026 recommended stack  
+- No dual legacy/modern chat paths to maintain  
+- Clear separation: chat model vs embed model  
+
+### Negative / ops
+
+- All previously ingested vectors from old embed models are **invalid** for comparison → operators must **re-ingest**  
+- Free-tier limits still apply to Gemini chat and embeddings  
+- Embed space is incompatible across embed model generations  
+
+## Related
+
+- [Embeddings, Qdrant & Gemini stack (plain language)](/docs/guide/embeddings-and-qdrant)  
+- [ADR-0008](/docs/adr/0008-gemini-streaming-rag)  

@@ -6,6 +6,8 @@
     "local-development",
     "environment",
     "docker",
-    "document-ingest"
+    "document-ingest",
+    "rag-chat",
+    "embeddings-and-qdrant"
   ]
 }

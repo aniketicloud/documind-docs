@@ -23,7 +23,7 @@ docker compose logs -f redis
 - **`--protected-mode no`** so the host app can connect via Docker port publish  
   (Docker NAT is not “loopback” from Redis’s point of view; protected mode would deny Node clients)
 - Volume: `redisdata`
-- Used today for the **Redis demo** API; suitable later as a job queue
+- Used for the **Redis demo** API and the **ingest job queue** (`documind:ingest:queue`)
 
 ## RustFS
 
@@ -36,7 +36,9 @@ docker compose logs -f redis
 
 - Ports **6335** (HTTP), **6336**
 - Volume: `qdrant_storage`
-- Reserved for future vector search / RAG (not wired into chat yet)
+- **In use for RAG:** stores **embedding vectors** (lists of numbers) for document chunks + original chunk text in payload
+- App env: `QDRANT_URL=http://127.0.0.1:6335` (host maps to container `6333`)
+- Collection vector **size must match** `GEMINI_EMBED_DIMENSIONS` (default 768). If you change embed model/dims, re-ingest — see [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant)
 
 ## Health tips
 

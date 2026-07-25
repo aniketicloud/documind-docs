@@ -15,24 +15,43 @@ All app APIs below expect an authenticated session unless noted.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/documents` | List current user’s documents (`?status=`) |
+| `GET` | `/api/documents` | List current user’s documents (`?status=pending\|ready\|processing\|indexed\|failed`) |
 | `POST` | `/api/documents/presign` | Create pending row + presigned PUT |
-| `POST` | `/api/documents/confirm` | Mark ready after upload |
+| `POST` | `/api/documents/confirm` | Confirm object in S3, mark ready, **enqueue ingest** |
 | `GET` | `/api/documents/:id` | Metadata (owner) |
 | `DELETE` | `/api/documents/:id` | Delete object + row |
 | `GET` | `/api/documents/:id/download` | Presigned GET URL |
+| `POST` | `/api/documents/:id/reprocess` | Force new ingest job (retry) |
 
 ## Chats
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/chats` | List chats |
-| `POST` | `/api/chats` | Create chat + first messages |
+| `POST` | `/api/chats` | Create chat + first user message (no AI) |
+| `POST` | `/api/chats/stream` | Create chat + stream Gemini RAG reply (`text/plain`, header `X-Chat-Id`) |
 | `GET` | `/api/chats/:id` | Chat + messages |
 | `PATCH` | `/api/chats/:id` | Rename |
 | `DELETE` | `/api/chats/:id` | Delete chat + messages |
-| `POST` | `/api/chats/:id/messages` | Append user + placeholder assistant |
+| `POST` | `/api/chats/:id/messages` | Append user message only (no AI) |
+| `POST` | `/api/chats/:id/messages/stream` | Append user + stream Gemini RAG reply |
 
+### Stream body & RAG rules
+
+Stream endpoints accept JSON `{ content?: string, documentIds?: string[], modelId?: string }`.
+
+- `modelId`: `glm-4.7-flash` | `gemini-3.1-flash-lite` (see `GET /api/models`)  
+- Retrieval uses only **owned** documents with status **`indexed`** among `documentIds`  
+- No `documentIds` → general chat (no retrieval)  
+- Response is **token text** (`Content-Type: text/plain; charset=utf-8`)  
+- Full assistant message is saved when the stream completes  
+- Chat: Z.AI and/or Gemini **Interactions**; embeddings: `gemini-embedding-2`  
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/models` | Available chat models for the current env |
+
+Product rationale: [RAG chat](/docs/guide/rag-chat).
 ## Redis demo
 
 | Method | Path | Description |

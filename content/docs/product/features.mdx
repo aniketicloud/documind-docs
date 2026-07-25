@@ -16,24 +16,26 @@ description: Product capabilities of the Documind application.
 
 See [Authentication](/docs/product/auth).
 
-## Multi-chat
+## Multi-chat + document Q&A
 
 - **New chat** → `/new` (empty composer)  
-- First send (text and/or documents) creates a chat and navigates to `/c/[id]`  
-- **Recent** sidebar lists chats; active chat highlighted  
-- Rename and delete chats  
-- Assistant replies are **placeholders** (no model yet)
+- First send creates a chat, **streams** a Gemini answer, navigates to `/c/[id]`  
+- **Recent** sidebar: rename, delete  
+- **RAG rules:** only **indexed** documents **attached on that turn**  
+- Text files (`.txt` / `.md` / `.csv`) get embeddings via the ingest worker  
 
-See [Chat](/docs/product/chat).
+See [Chat](/docs/product/chat) and [RAG chat guide](/docs/guide/rag-chat).
 
 ## Documents
 
 - Upload from **My documents** and from chat  
 - List, download (presigned GET), delete  
 - Owner-only isolation  
+- Ingest pipeline: `processing` → `indexed` / `failed` (requires `worker:ingest`)  
 - Allowed types: PDF, Word, Excel, CSV, TXT, Markdown, RTF, ODT/ODS  
+- **Searchable RAG today:** primarily plain text formats  
 
-See [Documents](/docs/product/documents).
+See [Documents](/docs/product/documents) and [Document ingest](/docs/guide/document-ingest).
 
 ## Settings
 

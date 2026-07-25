@@ -5,7 +5,7 @@ description: Official documentation for Documind — document intelligence, mult
 
 # Documind
 
-**Documind** is a Next.js application for document-centric chat: sign in, upload text documents (PDF, Word, Excel, Markdown, etc.) to S3-compatible storage (RustFS), manage files, and hold multiple conversations with document attachments.
+**Documind** is a Next.js application for document-centric chat: sign in, upload documents to S3-compatible storage (RustFS), run async ingest into Qdrant, and stream Gemini answers grounded in **indexed** files you attach to a message.
 
 This site documents the **application repository** (`documind`), not this docs package itself.
 
@@ -13,7 +13,8 @@ This site documents the **application repository** (`documind`), not this docs p
 
 - **Auth** — email/password via Better Auth
 - **Multi-chat** — `/new` starts a chat; `/c/[id]` continues it; history in the sidebar
-- **Documents** — upload, list, download, delete; ownership enforced
+- **Streaming RAG** — Gemini answers over retrieved chunks (text files fully supported today)
+- **Documents** — upload, list, download, delete; ingest statuses; ownership enforced
 - **Settings** — General (name/email) and Account (logout)
 - **Redis demo** — simple key/value CRUD against Docker Redis
 - **Infrastructure** — Postgres, Redis, RustFS, Qdrant (compose)
@@ -23,11 +24,13 @@ This site documents the **application repository** (`documind`), not this docs p
 | Section | Contents |
 |--------|----------|
 | [Guide](/docs/guide/getting-started) | Install, env, Docker, local dev |
-| [Document ingest](/docs/guide/document-ingest) | **What Option A / worker:ingest means** |
+| [Document ingest](/docs/guide/document-ingest) | Upload vs worker vs statuses — **what & why** |
+| [RAG chat (B2+B3)](/docs/guide/rag-chat) | Streaming grounded chat — **what & why** |
+| [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant) | **What embeddings are**, Qdrant dims, Gemini 2026 stack |
 | [Product](/docs/product/features) | Features and user flows |
 | [Architecture](/docs/architecture/overview) | System design, data model, API |
 | [Development](/docs/development/conventions) | Conventions for contributors |
-| [Roadmap](/docs/development/roadmap) | **Pending work & choose next option** |
+| [Roadmap](/docs/development/roadmap) | Shipped work & choose next option |
 | [ADR](/docs/adr/0001-record-architecture-decisions) | Architecture decision records |
 
 ## Related repos
@@ -46,13 +49,17 @@ docker compose up -d
 npm install
 npm run db:push
 npm run dev
-# second terminal — required for document status "indexed"
+# second terminal — required for "indexed" + embeddings
 npm run worker:ingest
 ```
+
+Set `GEMINI_API_KEY` in `.env` (see [Environment](/docs/guide/environment)).
 
 App: [http://localhost:3000](http://localhost:3000)  
 These docs (local): [http://localhost:3001/docs](http://localhost:3001/docs)
 
-New to ingest / the worker? Read [Document ingest (Option A)](/docs/guide/document-ingest).
+- Upload / worker / statuses → [Document ingest](/docs/guide/document-ingest)  
+- Grounded streaming chat → [RAG chat](/docs/guide/rag-chat)  
+- What embeddings/Qdrant mean → [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant)  
 
 Continue with [Getting started](/docs/guide/getting-started).

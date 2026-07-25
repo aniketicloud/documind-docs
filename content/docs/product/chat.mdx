@@ -1,6 +1,6 @@
 ---
 title: Chat
-description: Multi-chat UX and behavior.
+description: Multi-chat UX, streaming RAG, and product rules for document context.
 ---
 
 ## Routes
@@ -11,19 +11,49 @@ description: Multi-chat UX and behavior.
 | `/c/[id]` | Existing conversation |
 | `/documind` | Legacy redirect → `/new` |
 
+## Why streaming RAG (not placeholders)
+
+Documind’s value is **answers grounded in your files**. Placeholders would train users that “chat works” while ignoring uploads. We therefore:
+
+1. Persist the **user** message first (with optional attachments)  
+2. Retrieve chunks only from **indexed** docs **on this turn**  
+3. Stream **Gemini** tokens into the UI  
+4. Persist the full **assistant** message when the stream ends  
+
+Deep dive: [RAG chat (B2+B3)](/docs/guide/rag-chat) · [ADR-0008](/docs/adr/0008-gemini-streaming-rag).
+
 ## Creating a chat
 
-1. User types and/or attaches ready documents  
-2. **Send** calls `POST /api/chats`  
-3. Server creates `chats` + user message + placeholder assistant message  
-4. Title auto-generated from first message or first file name  
-5. Client navigates to `/c/{id}`  
-6. Double-submit is blocked with a sync lock while creating  
+1. User types and/or attaches documents  
+2. **Send** calls `POST /api/chats/stream`  
+3. Server creates `chats` + user message (no placeholder assistant)  
+4. Streams Gemini over `text/plain`; saves assistant when done  
+5. Header `X-Chat-Id` — client navigates to `/c/{id}`  
+6. Double-submit blocked with a sync lock while streaming  
 
 ## Continuing a chat
 
-- `POST /api/chats/:id/messages` with optional `documentIds`  
-- Another placeholder assistant reply is stored  
+- `POST /api/chats/:id/messages/stream` with optional `documentIds`  
+- User message stored first; assistant streams then saves  
+- UI shows optimistic bubbles, then reloads canonical messages  
+
+## Model selector
+
+- Composer dropdown: **GLM 4.7 Flash** (Z.AI) and/or **Gemini 3.1 Flash-Lite** (Interactions API) when keys are set  
+- Choice is sent as `modelId` on stream requests and remembered in `localStorage`  
+- Server default: `DEFAULT_CHAT_MODEL` (typically `glm-4.7-flash`)  
+- `GET /api/models` returns only configured providers  
+- Gemini path: `@google/genai` → `interactions.create` (not legacy `generateContent`)  
+
+## RAG product rules
+
+| Rule | Behavior |
+|------|----------|
+| **Indexed only** | Non-indexed attachments → explicit “not ready” style answer, not invented content |
+| **This turn only** | Only `documentIds` on the message being sent are searched |
+| **Library picker** | Lists **indexed** documents (RAG-ready) |
+| **Fresh upload** | Chip = stored; wait for My documents `indexed` before expecting file-aware answers |
+| **No attachments** | General chat (no Qdrant); any configured generation model works |
 
 ## Sidebar
 
@@ -34,4 +64,4 @@ description: Multi-chat UX and behavior.
 
 ## UI building blocks
 
-MessageScroller, Message, Bubble, Attachment, Marker (shadcn chat components).
+MessageScroller, Message, Bubble, Attachment, Marker (shadcn chat components). Live assistant bubble while tokens stream.

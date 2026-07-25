@@ -17,5 +17,9 @@ Upload only stores objects + metadata. Parsing/chunking/embedding will be an asy
 
 ## Consequences
 
-- Pros: reliable uploads today  
-- Cons: assistant cannot yet use file contents  
+- Pros: reliable, fast uploads; worker can scale independently  
+- Cons: documents are not searchable until ingest completes  
+
+## Follow-up (implemented)
+
+Option **A** added the async worker and statuses. Options **B2/B3** run extract → embed → Qdrant in that worker and stream Gemini answers for **indexed** text docs. See [ADR-0008](/docs/adr/0008-gemini-streaming-rag).  

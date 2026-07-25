@@ -13,6 +13,7 @@ description: AuthN/AuthZ and isolation patterns.
 - Documents and chats always scoped by `session.user.id`  
 - Cross-user IDs return **404**, not 403 (avoid leaking existence)  
 - Object keys include `users/{userId}/...`; confirmed with `isKeyOwnedByUser`  
+- Qdrant search always filters by `userId` **and** the document IDs on the current turn  
 
 ## Uploads
 
@@ -20,10 +21,17 @@ description: AuthN/AuthZ and isolation patterns.
 - Client cannot choose another user’s prefix  
 - CORS restricted to configured app origin  
 
+## RAG scope
+
+- Only documents with status **`indexed`** contribute retrieved text  
+- Chat never silently searches the user’s entire library  
+- Model is instructed to stay within provided context (still not a guarantee of non-hallucination)
+
 ## Secrets
 
 - Never commit `.env`  
-- Rotate `BETTER_AUTH_SECRET` and S3 keys in production  
+- Rotate `BETTER_AUTH_SECRET`, S3 keys, and **`GEMINI_API_KEY`** in production  
+- If a Gemini key is pasted into chat/logs, treat it as leaked and rotate  
 - Local RustFS credentials are defaults for dev only  
 
 ## Redis / Docker

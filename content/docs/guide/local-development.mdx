@@ -45,8 +45,18 @@ See [UI conventions](/docs/development/ui).
 
 `documind/AGENTS.md` reminds agents to read Next.js 16 docs under `node_modules/next/dist/docs/` before changing framework APIs.
 
+## Full AI path (B2+B3)
+
+1. `docker compose up -d` (includes Qdrant)  
+2. Set `GEMINI_API_KEY` in `.env`  
+3. `npm run dev` + `npm run worker:ingest`  
+4. Upload a `.txt` / `.md` → wait for **indexed** → chat with library attach  
+
+See [RAG chat](/docs/guide/rag-chat) for what we built and why.
+
 ## Known gaps (product)
 
-- Assistant messages are **placeholders** (no LLM yet)  
-- No document text parsing / RAG yet (Qdrant is provisioned for later)  
+- RAG text extraction is **txt/md/csv** only (PDF/DOCX parsers = option **F**)  
+- No citation chips in the UI yet  
 - Dashboard route still exists but is not the primary UX  
+- Production rate limits / secret management still thin (option **D**)  

@@ -1,0 +1,246 @@
+---
+title: Embeddings, Qdrant & Gemini stack
+description: Plain-language embeddings, why Qdrant vector size matters, and what we changed in the Gemini 2026 migration.
+---
+
+# Embeddings, Qdrant, and the Gemini stack
+
+This page explains **three things people often mix up**:
+
+1. What an **embedding** is (and why Documind needs one)  
+2. What **Qdrant** stores, and **when you must change it** after a model switch  
+3. **What we did** when we left legacy Gemini (`generateContent` / `text-embedding-004`) and moved to **Interactions + `gemini-embedding-2` + `gemini-3.1-flash-lite`**
+
+Related: [RAG chat](/docs/guide/rag-chat) · [Document ingest](/docs/guide/document-ingest) · [Environment](/docs/guide/environment) · [ADR-0008](/docs/adr/0008-gemini-streaming-rag)
+
+---
+
+## The 30-second picture
+
+```text
+Your document text
+      │
+      ▼
+  “Chunk” into short pieces
+      │
+      ▼
+  Embedding model turns each piece into a list of numbers  ← embedding
+      │
+      ▼
+  Qdrant stores those number-lists + the original text     ← vector DB
+      │
+      ▼
+  Your chat question is also turned into numbers
+      │
+      ▼
+  Qdrant finds chunks whose numbers are “closest”
+      │
+      ▼
+  Chat model (Gemini or Z.AI) answers using those chunks   ← generation (different model!)
+```
+
+**Chat models** write words.  
+**Embedding models** turn words into coordinates for search.  
+They are **not the same model**, even though both can come from Google.
+
+---
+
+## What is an embedding? (no jargon)
+
+Imagine every sentence lives as a point on a huge map.
+
+- Sentences about **deadlines** sit near each other  
+- Sentences about **parties to a contract** sit in another neighborhood  
+- Unrelated topics sit far away  
+
+An **embedding** is just the **list of coordinates** for a piece of text on that map — for us, **768 numbers** by default.
+
+| Term | Plain meaning |
+|------|----------------|
+| **Embedding** | A list of numbers that represents meaning of a text chunk |
+| **Vector** | Same thing; “vector database” = store for those lists |
+| **Dimension** | How many numbers in each list (we use **768**) |
+| **Similarity search** | “Which stored chunks have numbers closest to my question?” |
+
+### Why not search with keywords only?
+
+Keyword search fails when the user asks *“when is this due?”* but the file says *“closing date is 15 March.”*  
+Embeddings compare **meaning**, not exact words.
+
+### Why “chunk” the document first?
+
+Models and search work better on **paragraph-sized pieces** than on a whole 50-page file as one blob. Ingest:
+
+1. Extract text  
+2. Split into overlapping chunks  
+3. Embed **each** chunk  
+4. Store each chunk in Qdrant  
+
+---
+
+## Two different Gemini jobs in Documind
+
+| Job | Model we use | When it runs | Purpose |
+|-----|----------------|--------------|---------|
+| **Embed (search)** | `gemini-embedding-2` | Ingest worker + when you ask a question with attached docs | Numbers for Qdrant |
+| **Chat (answer)** | `gemini-3.1-flash-lite` **or** Z.AI `glm-4.7-flash` | When you send a message | Write the reply |
+
+So:
+
+- Changing the **chat** model in the UI does **not** rebuild Qdrant.  
+- Changing the **embedding** model or dimension **does** require re-indexing (see below).
+
+Env knobs (app `.env`):
+
+```bash
+GEMINI_API_KEY=...
+GEMINI_CHAT_MODEL=gemini-3.1-flash-lite      # Interactions API chat
+GEMINI_EMBED_MODEL=gemini-embedding-2         # vectors only
+GEMINI_EMBED_DIMENSIONS=768                   # must match Qdrant collection
+DEFAULT_CHAT_MODEL=glm-4.7-flash              # default picker choice
+```
+
+---
+
+## What is Qdrant here?
+
+**Qdrant** is the database that stores embeddings for Documind.
+
+Each stored point looks conceptually like:
+
+```text
+id:          stable id from document + chunk index
+vector:      [0.12, -0.03, …]   ← 768 floats
+payload:
+  userId
+  documentId
+  documentName
+  chunkIndex
+  text          ← original chunk (so we can put it in the prompt)
+```
+
+On chat with attached **indexed** docs:
+
+1. Embed the question with the **same** embed model and dimension  
+2. Search Qdrant with filters: this **user** + these **document ids**  
+3. Take top chunks → put their `text` into the chat model’s prompt  
+
+Docker: host port **6335** → container `6333`.  
+Env: `QDRANT_URL=http://127.0.0.1:6335`, collection default `documind_chunks`.
+
+You do **not** edit Qdrant by hand in normal use. The app creates the collection and the worker fills it.
+
+---
+
+## Do we need to change something in Qdrant when the model changes?
+
+### Chat model only (e.g. switch Gemini ↔ GLM in the UI)
+
+**No Qdrant change.** Vectors stay the same; only the model that writes the answer changes.
+
+### Embedding model or dimension changes
+
+**Yes — you must re-index.**
+
+| Change | Why it breaks old data | What Documind does | What you do |
+|--------|------------------------|--------------------|-------------|
+| New **embed model** (e.g. `text-embedding-004` → `gemini-embedding-2`) | Old and new maps are **different**. Numbers from model A are not comparable to model B. | Uses new model on next ingest/search | **Re-ingest** all documents you care about |
+| New **dimension** (e.g. 768 → 1536) | Qdrant collection is created for a fixed vector size | On startup/ingest, if collection size ≠ `GEMINI_EMBED_DIMENSIONS`, app **deletes and recreates** the collection | **Re-ingest** everything (old vectors were wiped) |
+| Only **chat** model | Unrelated to vectors | Nothing | Nothing for Qdrant |
+
+After the 2026 stack migration we use **`gemini-embedding-2` @ 768**.  
+If you previously indexed with `text-embedding-004`, treat old vectors as **obsolete** even if the collection still has 768 dims — the **space** changed. Re-ingest.
+
+### How to re-ingest (happy path)
+
+1. `docker compose up -d` (Qdrant running)  
+2. App `.env` has the embed settings above  
+3. `npm run worker:ingest`  
+4. **My documents** → **Retry ingest** on each file (or re-upload)  
+5. Wait for status **`indexed`**  
+6. Chat → attach from **Indexed documents** → ask  
+
+If the worker is not running, files stay `processing` and RAG has nothing useful.
+
+---
+
+## What we did in this step (Gemini 2026 modernization)
+
+### Problem
+
+Google’s docs (June/July 2026) make the **Interactions API** the recommended front door for Gemini chat.  
+`generateContent` is legacy (still works, but not where new features go).  
+Old embedding model **`text-embedding-004`** is shut down; modern path is **`gemini-embedding-2`** (or `gemini-embedding-001`).
+
+### Decisions (this project)
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Chat API | **Interactions** via `@google/genai` | Align with Google’s GA recommendation |
+| Remove | **`@google/generative-ai`** + all `generateContent` usage | Clean slate; app still early |
+| Chat model | **`gemini-3.1-flash-lite`** | Model you chose for Gemini path |
+| Embed model | **`gemini-embedding-2`** @ **768-d** | Current GA multimodal embed; 768 keeps Qdrant light |
+| Embed formatting | Task prefixes for retrieval (`task: search result \| query: …`, `title: … \| text: …`) | Recommended for Embeddings 2 quality |
+| Interactions storage | **`store: false`** | Chat history stays in **our** Postgres, not Google by default |
+| Keep Z.AI | **Yes** — model selector | Quota resilience; default chat **`glm-4.7-flash`** |
+| Default chat | **GLM** | Prefer stable chat when Gemini free tier is tight |
+
+### Code map (app repo)
+
+| Path | Role after this step |
+|------|----------------------|
+| `lib/gemini.ts` | `@google/genai` only: embed + Interactions stream |
+| `lib/llm.ts` | Routes to Z.AI or Gemini by `modelId` |
+| `lib/llm-models.ts` | Catalog: `glm-4.7-flash`, `gemini-3.1-flash-lite` |
+| `lib/qdrant.ts` | Collection size = `EMBEDDING_DIMENSIONS`; recreate if mismatch |
+| `lib/ingest.ts` | Chunk → embed (with document title) → upsert |
+| `lib/rag.ts` | Query embed → search → stream answer |
+
+### What you should not expect
+
+- Switching chat model does **not** “retrain” or re-embed documents  
+- **`indexed`** after re-ingest means “vectors written with the **current** embed model” (for text files that produced chunks)  
+- PDF/Word still need better parsers (option **F**) for real text extraction  
+
+---
+
+## FAQ
+
+### “I only said hi — do embeddings run?”
+
+**No.** With **no attached documents**, chat is general conversation. Only the **chat** model runs (GLM or Gemini Interactions).
+
+### “I attached a file but the answer ignores it.”
+
+Checklist:
+
+1. Status **`indexed`** on My documents?  
+2. Worker running?  
+3. Text type (`.txt` / `.md` / `.csv`) with real content?  
+4. Re-ingested **after** the embed model migration?  
+5. File selected in the **Indexed documents** picker for **this** send?
+
+### “Can I use 1536 dimensions?”
+
+Yes. Set `GEMINI_EMBED_DIMENSIONS=1536`, restart app/worker, let Qdrant collection recreate, **re-ingest all docs**. Larger vectors = more storage and slightly more cost, often modest quality gain.
+
+### “Is Qdrant the same as Redis?”
+
+No.
+
+| Service | Role |
+|---------|------|
+| **Redis** | Job queue (ingest) + demo KV page |
+| **Qdrant** | Vector search for RAG chunks |
+| **Postgres** | Users, chats, document metadata, jobs |
+| **RustFS** | Raw file bytes |
+
+---
+
+## Related pages
+
+- [RAG chat (B2+B3)](/docs/guide/rag-chat) — product rules and streaming  
+- [Document ingest](/docs/guide/document-ingest) — worker and statuses  
+- [Environment variables](/docs/guide/environment) — full env table  
+- [Docker services](/docs/guide/docker) — Qdrant ports  
+- [ADR-0008](/docs/adr/0008-gemini-streaming-rag) — decision record  

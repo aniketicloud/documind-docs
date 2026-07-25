@@ -1,0 +1,189 @@
+---
+title: RAG chat (B2 + B3)
+description: What we built for grounded answers — Gemini, Qdrant, streaming — and why we chose this slice.
+---
+
+# RAG chat explained (Options B2 + B3)
+
+This page is the plain-language record of **what we shipped** for document-grounded chat and **why** those product and engineering choices.
+
+For the background job that prepares files, see [Document ingest](/docs/guide/document-ingest).  
+For the formal decision record, see [ADR-0008](/docs/adr/0008-gemini-streaming-rag).
+
+---
+
+## The simple picture (after A + B)
+
+```text
+1. UPLOAD     →  Save the file in RustFS (fast, browser → S3)
+2. INGEST     →  Worker extracts text, chunks, embeds → Qdrant
+3. CHAT / AI  →  User asks; app retrieves chunks; Gemini streams an answer
+```
+
+| Step | User-visible | System |
+|------|--------------|--------|
+| **Upload** | Chip “done”; file on **My documents** | Presigned PUT to RustFS; Postgres row |
+| **Ingest** | Badge `processing` → `indexed` | Worker: extract (txt/md/csv) → chunk → Gemini embeddings → Qdrant |
+| **Chat** | Live streaming reply | Only **indexed** docs **attached this turn** are searchable |
+
+---
+
+## What we built
+
+### Ingest (extends Option A)
+
+When `npm run worker:ingest` claims a job it now:
+
+1. Downloads the object from RustFS  
+2. Extracts plain text for **`.txt` / `.md` / `.csv`** (and light RTF cleanup)  
+3. Splits text into overlapping chunks  
+4. Embeds each chunk with **`gemini-embedding-2`** (768 dimensions by default)  
+5. Upserts points into **Qdrant** with payload: `userId`, `documentId`, `documentName`, `chunkIndex`, `text`  
+6. Marks the document **`indexed`** (or **`failed`** with a retriable error)  
+
+New to embeddings / “why re-ingest?” → **[Embeddings, Qdrant & Gemini stack](/docs/guide/embeddings-and-qdrant)**.
+
+**Unsupported types for text RAG** (e.g. PDF/DOCX without parsers yet): ingest can still finish as **`indexed`** for storage lifecycle, but **no vectors** are stored. Chat will not invent content from those files.
+
+### Chat (streaming RAG)
+
+| Endpoint | Role |
+|----------|------|
+| `POST /api/chats/stream` | Create chat + user message → stream assistant → save |
+| `POST /api/chats/:id/messages/stream` | Append user message → stream assistant → save |
+
+Flow per send:
+
+1. Persist the **user** message (and attachment links) — **no placeholder assistant**  
+2. Embed the question with **`gemini-embedding-2`** (same space as ingest)  
+3. Search Qdrant filtered by **`userId` + document IDs from this turn only**  
+4. Build a system prompt that requires answers from context (or admit gaps)  
+5. Stream chat tokens (Gemini **Interactions** or **Z.AI**) as `text/plain`  
+6. Save the full assistant message when the stream ends  
+
+The UI shows an optimistic user bubble and a live assistant bubble while tokens arrive.
+
+### Product rules we enforced
+
+| Rule | Why |
+|------|-----|
+| **Indexed-only RAG** | Partially processed files must not look “AI-ready.” Honest status beats hallucinated confidence. |
+| **Turn-attached docs only** | The user controls context. No silent “search my entire library.” |
+| **Upload ≠ AI** | Chat chips still mean “file stored.” **My documents** + `indexed` mean “searchable.” |
+| **Streaming (B3 with B2)** | Waiting for full generation feels broken next to modern chat apps; tokens stream as soon as retrieval finishes. |
+| **Gemini free tier** | Zero-cost local MVP for embeddings + chat without locking the product to a paid vendor yet. |
+
+---
+
+## Why this slice (and not the alternatives)
+
+### Why not LLM-only (Option C)?
+
+Calling a model without retrieval would produce fluent answers that **ignore** the files. Users would reasonably believe Documind “read” the document. That breaks the product north star: *chat grounded in your documents*.
+
+### Why not parse PDF first (Option F before B2)?
+
+PDF/Office parsers are higher complexity (binary formats, layout, optional OCR). We already had a worker pipeline. **Text files** prove the full loop end-to-end:
+
+> upload → job → vectors → retrieve → stream answer  
+
+PDF quality can plug into the **same worker** later without redesigning chat.
+
+### Why Qdrant (not Postgres full-text only)?
+
+- Compose already ran Qdrant  
+- Vector search matches semantic questions (“deadlines?”, “who is liable?”) better than keyword-only  
+- Payload filters (`userId`, `documentId`) match multi-tenant ownership  
+
+### Gemini Interactions + Z.AI (2026)
+
+- Chat on Gemini uses the **Interactions API** (`@google/genai`, model **`gemini-3.1-flash-lite`**) — not legacy `generateContent`  
+- Embeddings use **`gemini-embedding-2`** (768-d Matryoshka) with retrieval task prefixes for documents/queries  
+- **Z.AI** (`glm-4.7-flash`) stays as a second chat backend + default in the model selector  
+- Interactions requests use `store: false` (chat history lives in Postgres, not Google)
+
+**Cost of the choice:** free-tier limits still apply; sequential embedding in the worker; re-ingest after any embed dim/model change.
+
+### Why stream as plain text (not SSE/JSON events)?
+
+Simplest client path for an MVP: `fetch` + `ReadableStream` + append tokens. Headers carry `X-Chat-Id` for navigation after create. We can upgrade to structured events (citations, tool calls) when the UI needs them.
+
+---
+
+## What “indexed” means now
+
+| File type | After successful ingest |
+|-----------|-------------------------|
+| `.txt`, `.md`, `.csv` (non-empty) | Vectors in Qdrant → usable for RAG |
+| Other allow-listed types | Often `indexed` for storage, **no chunks** until Option F parsers |
+| Empty / extract failure | `failed` (retry from My documents) |
+
+So **`indexed` always means “ingest job succeeded.”** For chat quality, prefer text files until PDF parsers land.
+
+---
+
+## How to run the full path
+
+```bash
+# 1) Infra (Postgres, Redis, RustFS, Qdrant)
+docker compose up -d
+
+# 2) .env must include GEMINI_API_KEY (never commit real keys)
+#    QDRANT_URL=http://127.0.0.1:6335
+
+# 3) App
+npm run dev
+
+# 4) Worker (required for indexed + embeddings)
+npm run worker:ingest
+```
+
+### Happy path
+
+1. **My documents** → upload a short `.txt` or `.md` with known facts  
+2. Wait for badge **`indexed`** (worker log: chunks upserted)  
+3. **New chat** → library picker (**Indexed documents**) → select file  
+4. Ask a question about that content → answer **streams**  
+5. Send without indexed attachments → model works with empty context (or explains if you attached non-indexed ids)
+
+---
+
+## Code map (app repo)
+
+| Path | Responsibility |
+|------|----------------|
+| `lib/text-extract.ts` | Extract + chunk plain text |
+| `lib/gemini.ts` | Embeddings + streaming generation |
+| `lib/qdrant.ts` | Collection, upsert, filtered search |
+| `lib/rag.ts` | Retrieve context + stream grounded answer |
+| `lib/ingest.ts` | Job queue + processIngestJob (embed path) |
+| `app/api/chats/stream` | Create + stream |
+| `app/api/chats/[id]/messages/stream` | Continue + stream |
+| `lib/chat-client.ts` | Browser stream helpers |
+| `components/chat-workspace.tsx` | UI: stream, indexed library, optimistic bubbles |
+
+---
+
+## What we deliberately left out
+
+| Deferred | Reason |
+|----------|--------|
+| PDF / DOCX / XLSX text extraction | Option **F** |
+| Citation chips in the UI | Next product polish (P1.7) |
+| Search-all-my-docs | Scope control; opt-in later if product asks |
+| Stop / regenerate | Chat controls (P2) |
+| Production rate limits / key vault | Option **D** |
+| Dockerized worker | Local `npm run worker:ingest` is enough for MVP |
+
+---
+
+## Related pages
+
+- [Document ingest](/docs/guide/document-ingest) — queue, worker, statuses  
+- [Chat product](/docs/product/chat)  
+- [Documents product](/docs/product/documents)  
+- [Architecture overview](/docs/architecture/overview)  
+- [Roadmap](/docs/development/roadmap)  
+- [Environment variables](/docs/guide/environment)  
+- [ADR-0007: No parse on upload](/docs/adr/0007-no-parse-on-upload)  
+- [ADR-0008: Gemini streaming RAG](/docs/adr/0008-gemini-streaming-rag)  

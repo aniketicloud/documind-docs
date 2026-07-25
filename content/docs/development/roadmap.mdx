@@ -1,13 +1,13 @@
 ---
 title: Product roadmap & next options
-description: Architect view of Documind status, pending work, and how to choose what to build next.
+description: Architect view of Documind status, what we shipped (A / B2 / B3), why, and what to build next.
 ---
 
 # Documind roadmap (app-focused)
 
 This plan is for the **Documind application** (`../documind`), not this docs site. Use it to decide the next engineering investment.
 
-**How to use this page:** pick an option ID under [Choose what to do next](#choose-what-to-do-next) (e.g. `A`, `B1`, `C`) and implement that slice.
+**How to use this page:** pick an option ID under [Choose what to do next](#choose-what-to-do-next) (e.g. `F`, `D`, `E`) and implement that slice.
 
 ---
 
@@ -15,23 +15,30 @@ This plan is for the **Documind application** (`../documind`), not this docs sit
 
 **Documind** should become: *upload text documents → ask questions grounded in those documents → keep multi-chat history with ownership and durable storage.*
 
-Today we have the **shell + storage + multi-chat UX**. We do **not** yet ground answers in file content (no parse / embed / retrieve / LLM).
+### Where we are now
+
+We have the **shell + storage + multi-chat UX**, plus a **real RAG path for text files**:
+
+- Upload → async ingest → embeddings in Qdrant  
+- Chat streams Gemini answers grounded in **indexed** docs **attached on that turn**
 
 ```mermaid
 flowchart TB
   subgraph done [Built]
     Auth[Better Auth]
-    ChatUI[Multi-chat UI]
+    ChatUI[Multi-chat + stream UI]
     Docs[Documents CRUD]
     S3[RustFS presigned]
-    RedisDemo[Redis demo]
+    Ingest[Async ingest worker]
+    Chunk[Chunk + embed Gemini]
+    Qdrant[Qdrant store]
+    LLM[Streaming RAG chat]
   end
 
   subgraph next [Next critical path]
-    Ingest[Async ingest parse]
-    Chunk[Chunk + embed]
-    Qdrant[Qdrant store]
-    LLM[Chat with RAG]
+    PDF[PDF/DOCX parsers F]
+    Cite[Citations UI]
+    Prod[Hardening D]
   end
 
   Auth --> ChatUI
@@ -40,6 +47,9 @@ flowchart TB
   Ingest --> Chunk --> Qdrant
   ChatUI --> LLM
   Qdrant --> LLM
+  Ingest --> PDF
+  LLM --> Cite
+  LLM --> Prod
 ```
 
 ---
@@ -51,120 +61,162 @@ flowchart TB
 | Marketing + theme | Done | Landing, dark/light |
 | Auth (email/password) | Done | Better Auth + Postgres |
 | Multi-chat | Done | `/new`, `/c/[id]`, rename, delete |
-| Chat messages | Partial | Persisted; **assistant is placeholder** |
+| Chat messages | **Done (B2/B3)** | Stream Gemini RAG; persist after stream |
 | Document upload | Done | Chat + My documents; allow-list |
 | Document ownership | Done | Owner-only APIs |
 | RustFS (S3) | Done | Presign PUT/GET/DELETE |
-| Redis | Demo only | CRUD playground; not used as job queue |
-| Qdrant | Infra only | In compose; **not used by app code** |
-| Document ingest pipeline | **Option A done** | Queue + worker + statuses; no full parse/RAG yet |
-| Document parsing | Stub only | Text probe for txt/md/csv; full parse = B/F |
-| RAG / embeddings | Not started | — |
-| LLM integration | Not started | — |
+| Redis | Queue + demo | Ingest job list + `/redis` playground |
+| Qdrant | **In use** | Chunk vectors; filtered search |
+| Document ingest pipeline | **A + B2** | Jobs, worker, extract/embed for text |
+| Document parsing | **Text suite** | txt/md/csv; PDF/Office = option F |
+| RAG / embeddings | **Done (B2)** | Gemini embed + Qdrant |
+| LLM integration | **Done (B3)** | Streaming chat APIs + UI |
 | Production hardening | Thin | Secrets, rate limits, observability |
 | Dashboard (`/dashboard`) | Legacy | shadcn demo; not core product |
 
 ### Data already modeled
 
-- Auth tables, `documents`, `chats`, `chat_messages`, `chat_message_documents`
-- Document statuses: `pending` | `ready` | `failed` (file storage only)
+- Auth tables, `documents`, `chats`, `chat_messages`, `chat_message_documents`, `document_jobs`
+- Document statuses: `pending` | `ready` | `processing` | `indexed` | `failed`
 
-### Infra already running (Docker)
+### Infra (Docker)
 
-Postgres, Redis, RustFS, Qdrant — enough to start the **ingest + RAG** path without new containers (except optionally a worker process).
+Postgres, Redis, RustFS, Qdrant. App needs **`GEMINI_API_KEY`** and a second process: `npm run worker:ingest`.
 
 ---
 
 ## 3. Architectural principles (keep these)
 
-1. **Upload stays fast** — never parse large PDFs inside the Next request that handles browser upload.
-2. **Owner isolation** — every read/write filters `userId`; no cross-user leakage.
-3. **Async ingestion** — Redis (or similar) queue + worker for extract → chunk → embed.
-4. **Retrieval before generation** — chat answers should use Qdrant (or equivalent) with `userId` + `documentId` filters.
-5. **Docs stay separate** — product code in `documind`; docs in `documind-docs`.
-6. **ADRs for big choices** — model provider, worker language (Node vs Python for PDF), embed model.
+1. **Upload stays fast** — never parse large PDFs inside the Next request that handles browser upload.  
+2. **Owner isolation** — every read/write filters `userId`; Qdrant search filters `userId` too.  
+3. **Async ingestion** — Redis queue + worker for extract → chunk → embed.  
+4. **Retrieval before generation** — answers use Qdrant with `userId` + attached `documentId`s.  
+5. **Honest eligibility** — only **`indexed`** docs contribute context; UI library lists those.  
+6. **Docs stay separate** — product code in `documind`; docs in `documind-docs`.  
+7. **ADRs for big choices** — model provider, retrieval scope, worker language for PDF.
 
 ---
 
-## 4. Target architecture (to-be)
+## 4. Target architecture (implemented core)
 
 ```text
 Browser
   → Next.js (UI + thin APIs)
       → Postgres (users, chats, documents, jobs metadata)
       → RustFS (bytes)
-      → Redis (job queue)
+      → Redis (ingest job queue)
+      → Gemini (embed query + stream answer)
+      → Qdrant (filtered vector search)
   → (presigned) RustFS upload/download
 
-Worker (new process or container)
+Worker (npm run worker:ingest)
   → pop job
   → GET object from RustFS
-  → parse by type (txt/md/csv/docx/xlsx/pdf…)
+  → parse txt/md/csv (PDF later)
   → chunk
-  → embed
+  → embed (Gemini)
   → upsert Qdrant points { userId, documentId, chunkIndex, text }
 
-Chat send
+Chat send (stream routes)
+  → persist user message
   → embed query
-  → Qdrant search (filter userId + selected documentIds)
-  → LLM with citations
+  → Qdrant search (filter userId + this-turn documentIds, indexed only)
+  → stream LLM tokens
   → persist assistant message
 ```
 
-Suggested new document statuses (when ingest lands):
+Document statuses:
 
 | Status | Meaning |
 |--------|---------|
 | `pending` | Presign created / upload not confirmed |
-| `ready` | Object in RustFS confirmed |
-| `processing` | Ingest job running |
-| `indexed` | Searchable in Qdrant |
-| `failed` | Upload or ingest failed (store reason) |
+| `ready` | Object in RustFS confirmed (brief; then enqueue) |
+| `processing` | Ingest job queued or running |
+| `indexed` | Ingest succeeded (vectors if text-extractable) |
+| `failed` | Upload or ingest failed (store reason; retriable) |
 
 ---
 
-## 5. Work backlog (prioritized)
+## 5. What we shipped recently — and why
 
-### P0 — Correctness & product clarity (short)
+### Option A — Ingest foundation ✅
+
+**What:** `document_jobs`, Redis queue, `worker:ingest`, statuses, My documents badges, retry.
+
+**Why:** Upload must stay fast (ADR-0007). Heavy work needs a separate process, retries, and visible lifecycle before any “smart” features.
+
+**Guide:** [Document ingest](/docs/guide/document-ingest)
+
+### Options B2 + B3 — Text RAG + streaming ✅
+
+**What:**
+
+- Worker: extract → chunk → Gemini embeddings → Qdrant  
+- Chat: `POST /api/chats/stream` and `.../messages/stream`  
+- Product rules: **indexed-only**, **attached-on-this-turn-only**  
+- UI: live tokens, library = indexed docs  
+
+**Why (short):**
+
+| Choice | Rationale |
+|--------|-----------|
+| Gemini free tier | Zero-cost MVP for embed + chat; swappable later |
+| Qdrant | Already in Compose; semantic search + ownership filters |
+| Text parsers first | Prove full loop without PDF complexity |
+| Indexed-only | Don’t pretend unprocessed files are usable |
+| Per-turn attachments | User controls context; no silent library-wide search |
+| Ship streaming with RAG | Demo-quality UX; avoid “spinner then dump” |
+
+**Guides:** [RAG chat (B2+B3)](/docs/guide/rag-chat) · [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant) · [ADR-0008](/docs/adr/0008-gemini-streaming-rag) · [ADR-0009](/docs/adr/0009-gemini-interactions-embedding-2)
+
+### Gemini 2026 stack ✅
+
+**What:** Interactions API chat (`gemini-3.1-flash-lite`), `gemini-embedding-2` vectors, removed legacy `generateContent` SDK.
+
+**Why:** Google’s recommended front door for new work; old embed model shut down.
+
+**Operator note:** After this change, **re-ingest** documents so Qdrant holds vectors from the new embed model.
+
+---
+
+## 6. Work backlog (remaining)
+
+### P0 — Correctness & product clarity
 
 | ID | Item | Why |
 |----|------|-----|
-| P0.1 | Remove or hide legacy **Dashboard** from product mental model | Reduces confusion |
-| P0.2 | Document status UX (`processing` / `indexed`) when ingest starts | Users know when files are usable in chat |
-| P0.3 | Rate-limit / harden presign + chat create | Abuse protection before public deploy |
+| P0.1 | Remove or hide legacy **Dashboard** | Reduces confusion |
+| P0.3 | Rate-limit / harden presign + chat stream | Abuse protection before public deploy |
 | P0.4 | Production env checklist (secrets, HTTPS, CORS, Redis AUTH) | Local compose ≠ production |
 
-### P1 — Document intelligence core (main path)
+### P1 — Document intelligence (next)
 
-| ID | Item | Why |
-|----|------|-----|
-| **P1.1** | **Ingest job model** (table or Redis stream) after document `ready` | Foundation for all AI features |
-| **P1.2** | **Worker process** (start Node; PDF may move to Python/PyMuPDF later) | Keep Next free of heavy CPU |
-| **P1.3** | **Parsers by type** (txt/md/csv/docx/xlsx first; PDF next) | Unlock content |
-| **P1.4** | **Chunking** strategy + store chunks (Postgres and/or Qdrant payload) | Retrieval quality |
-| **P1.5** | **Embeddings + Qdrant** upsert with ownership filters | RAG store |
-| **P1.6** | **Chat RAG** — replace placeholder assistant with retrieve + LLM | Product value |
-| **P1.7** | **Citations UI** (which doc/chunk answered) | Trust |
+| ID | Item | Why | Status |
+|----|------|-----|--------|
+| P1.1–P1.2 | Job model + worker | Foundation | **Done (A)** |
+| P1.3 | Parsers (text first; PDF next) | Unlock content | **Text done; PDF open (F)** |
+| P1.4–P1.5 | Chunk + Qdrant + embeddings | RAG store | **Done (B2)** |
+| P1.6 | Chat RAG + LLM stream | Product value | **Done (B2+B3)** |
+| **P1.7** | **Citations UI** (doc/chunk) | Trust | Open |
+| **P1.8** | **PDF/DOCX/XLSX extract** | Real-world files | Open (**F**) |
 
 ### P2 — Chat product depth
 
 | ID | Item | Why |
 |----|------|-----|
-| P2.1 | Stream assistant tokens | UX parity with ChatGPT/Claude |
 | P2.2 | Stop / regenerate | Expected chat controls |
-| P2.3 | Per-chat document scope (only attached docs vs all user docs) | Control context |
+| P2.3 | Optional “all my indexed docs” scope | Power users (opt-in) |
 | P2.4 | Soft-delete / archive chats | Safer history |
-| P2.5 | Editable profile (name) beyond read-only settings | Account completeness |
+| P2.5 | Editable profile name | Account completeness |
 
 ### P3 — Platform & ops
 
 | ID | Item | Why |
 |----|------|-----|
-| P3.1 | App deploy (Vercel/Fly/etc.) + managed Postgres/S3/Redis | Real users |
-| P3.2 | Observability (logs, traces, upload/ingest metrics) | Debug production |
-| P3.3 | E2E tests (auth, upload, chat create) | Regression safety |
-| P3.4 | Virus/malware scanning optional for uploads | Enterprise readiness |
-| P3.5 | Multi-tenant org/teams (if needed) | B2B |
+| P3.1 | App deploy + managed services | Real users |
+| P3.2 | Observability (upload/ingest/RAG metrics) | Debug production |
+| P3.3 | E2E tests (auth, upload, stream chat) | Regression safety |
+| P3.4 | Optional malware scan for uploads | Enterprise readiness |
 
 ### P4 — Explicit non-goals (for now)
 
@@ -175,101 +227,47 @@ Suggested new document statuses (when ingest lands):
 
 ---
 
-## 6. Suggested sequencing (dependency order)
-
-```text
-P1.1 Job model
-  → P1.2 Worker
-    → P1.3 Parsers (text suite first)
-      → P1.4 Chunking
-        → P1.5 Qdrant + embeddings
-          → P1.6 Chat RAG + LLM
-            → P1.7 Citations
-              → P2.1 Streaming …
-```
-
-Do **not** wire the LLM before retrieval works; that produces hallucinated “document answers.”
-
-**Parser performance note (already decided direction):**  
-Node parsers for txt/md/csv/docx/xlsx; evaluate **PyMuPDF** (or Tika) for PDF in a worker when PDF quality/speed matters. See product discussions / ADR-0007.
-
----
-
 ## 7. Choose what to do next
 
 Pick **one** option and implement that slice end-to-end before starting another.
 
-### Option A — **Ingest foundation** ✅ Implemented
+### Option A — **Ingest foundation** ✅ Done
 
-**Shipped:** `document_jobs` + Redis queue + `npm run worker:ingest` + statuses `processing` / `indexed` / `failed` + UI badges + reprocess.
+See [Document ingest](/docs/guide/document-ingest).
 
-**Out of scope for A (still open):** LLM answers, Qdrant, full PDF parse.
+### Option B2 — **Text RAG MVP** ✅ Done
 
-**Exit criteria:** after upload, a worker marks the document indexed (or failed) without blocking upload API.
+Parse txt/md/csv + embed + Qdrant + retrieve on chat.
 
-**Explain this stage in plain language:** [Document ingest (Option A)](/docs/guide/document-ingest)
+### Option B3 — **Streaming LLM** ✅ Done (with B2)
 
----
+Stream Gemini over plain-text responses; UI live bubbles.
 
-### Option B — **Text-first RAG MVP** (fastest path to real Q&A)
+### Option C — **LLM chat only (no RAG)** — not recommended now
 
-**Ship:** parse **txt/md/csv** only + chunk + embed + Qdrant + chat uses retrieval for those types.
+Would ignore document bytes. Superseded by B2/B3 for Documind’s north star.
 
-**Out of scope for B:** PDF/DOCX excellence (add later).
+### Option D — **Production hardening** (recommended soon)
 
-**Exit criteria:** attach a `.txt` or `.md`, ask a question, get an answer grounded in that file with a basic citation.
-
-**Sub-options:**
-
-| ID | Focus |
-|----|--------|
-| **B1** | Parse + store plain text in Postgres only (no vectors) — simpler, weaker search |
-| **B2** | Parse + embed + Qdrant (recommended) |
-| **B3** | B2 + OpenAI/Anthropic/xAI streaming UI |
-
----
-
-### Option C — **LLM chat only (no RAG)**
-
-**Ship:** replace placeholder assistant with a real model; ignore document bytes.
-
-**Exit criteria:** multi-turn chat works with streaming.
-
-**Risk:** users will think documents are used when they are not — label UI clearly. Prefer A/B for Documind’s north star.
-
----
-
-### Option D — **Production hardening**
-
-**Ship:** env validation, rate limits, Redis AUTH for non-local, S3 production config, remove Redis demo from main nav (or gate behind `NODE_ENV=development`), error budgets, deploy app.
+**Ship:** env validation, rate limits, Redis AUTH for non-local, S3 production config, gate Redis demo, deploy app.
 
 **Exit criteria:** checklist-based production deploy of current features.
 
----
+### Option E — **UX polish**
 
-### Option E — **UX polish (no AI)**
+**Ship:** better empty states, dashboard removal, document search filter, mobile sidebar, profile edit, citation chips.
 
-**Ship:** streaming UI shell, better empty states, dashboard removal, document search filter, mobile sidebar polish, profile edit.
+### Option F — **PDF-capable ingest** (recommended product next)
 
-**Exit criteria:** product feels finished as a **document locker + multi-chat shell**.
+**Ship:** PDF (and ideally DOCX/XLSX) text extraction in the worker → same chunk/embed path.
 
----
+**Depends on:** A (done). Reuses B2 vector path.
 
-### Option F — **PDF-capable ingest**
-
-**Ship:** dedicated PDF pipeline (PyMuPDF worker or Tika) after A exists.
-
-**Depends on:** Option A.
-
-**Exit criteria:** PDF upload → indexed → retrievable chunks with page metadata.
-
----
+**Exit criteria:** PDF upload → indexed with chunks → answers grounded in that PDF.
 
 ### Option G — **Docs / ops only**
 
-**Ship:** publish `documind-docs` to Vercel; keep app backlog frozen.
-
-**Exit criteria:** public docs URL linked from app README.
+Publish `documind-docs` to Vercel; keep app backlog frozen.
 
 ---
 
@@ -277,27 +275,30 @@ Pick **one** option and implement that slice end-to-end before starting another.
 
 | If you want… | Choose |
 |--------------|--------|
-| Real “chat with my files” soon | **A** then **B2** (then **B3**) |
-| Demo of AI chat this week | **C** (temporary) or **B3** if text files only |
+| Better “chat with real PDFs” | **F** |
 | Ship current product safely | **D** |
-| Looks polished without AI | **E** |
-| PDF quality | **A** then **F** |
-| Public documentation | **G** |
+| Trust / polish (citations, layout) | **E** (+ P1.7) |
+| Public documentation hosting | **G** |
 
-**Architect recommendation for Documind:**  
-**A → B2 → B3 → F → D**, with **E** interleaved as small PRs.
+**Architect recommendation now:**  
+**F → D**, with **E**/citations interleaved as small PRs.
+
+Historical path that got us here: **A → B2 → B3**.
 
 ---
 
 ## 9. Definition of done for “v1 document intelligence”
 
-- [ ] Upload text docs (current allow-list)  
-- [ ] Async ingest; status visible  
-- [ ] Vectors in Qdrant with `userId` filter  
-- [ ] Chat uses only the user’s (selected) documents  
-- [ ] Placeholder assistant removed for RAG path  
-- [ ] Failures visible and retriable  
-- [ ] ADRs updated for model + embed provider  
+- [x] Upload text docs (current allow-list)  
+- [x] Async ingest; status visible  
+- [x] Vectors in Qdrant with `userId` filter  
+- [x] Chat uses only the user’s **selected (turn)** documents  
+- [x] Placeholder assistant removed for RAG path  
+- [x] Failures visible and retriable  
+- [x] ADRs for model + embed provider (ADR-0008)  
+- [ ] PDF-quality extraction  
+- [ ] Citation UI  
+- [ ] Production hardening checklist  
 
 ---
 
@@ -305,15 +306,12 @@ Pick **one** option and implement that slice end-to-end before starting another.
 
 Reply with one of:
 
-- `Do A` — ingest foundation  
-- `Do B2` — text RAG MVP  
-- `Do B3` — RAG + streaming LLM  
-- `Do C` — LLM without RAG  
+- ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ — **done**  
+- `Do F` — PDF (and related) ingest  
 - `Do D` — production hardening  
 - `Do E` — UX polish  
-- `Do F` — PDF ingest (after A)  
 - `Do G` — deploy docs to Vercel  
-- Or a custom mix, e.g. `Do A + B2`  
+- Or a custom mix, e.g. `Do F + citations`  
 
 Work lands in the **`documind`** app repo unless the option is docs-only (**G**).
 
@@ -321,8 +319,13 @@ Work lands in the **`documind`** app repo unless the option is docs-only (**G**)
 
 ## 11. Related docs
 
+- [RAG chat (B2+B3) — what & why](/docs/guide/rag-chat)  
+- [Embeddings, Qdrant & Gemini stack](/docs/guide/embeddings-and-qdrant)  
+- [Document ingest](/docs/guide/document-ingest)  
 - [Architecture overview](/docs/architecture/overview)  
-- [Documents product](/docs/product/documents)  
 - [Chat product](/docs/product/chat)  
+- [Documents product](/docs/product/documents)  
 - [ADR-0007 no parse on upload](/docs/adr/0007-no-parse-on-upload)  
+- [ADR-0008 Gemini streaming RAG](/docs/adr/0008-gemini-streaming-rag)  
+- [ADR-0009 Interactions + embedding-2](/docs/adr/0009-gemini-interactions-embedding-2)  
 - [Deploy documentation](/docs/development/deploy-docs)  

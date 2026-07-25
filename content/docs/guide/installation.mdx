@@ -36,7 +36,7 @@ Services defined in `docker-compose.yml`:
 | `postgres` | PostgreSQL | `5433` → 5432 |
 | `redis` | Redis (AOF, protected-mode off for local) | `6379` |
 | `rustfs` | S3-compatible object storage | `9000` API, `9001` console |
-| `qdrant` | Vector DB (for future RAG) | `6335`, `6336` |
+| `qdrant` | Vector DB for RAG chunk store | `6335`, `6336` |
 
 Stop:
 
@@ -46,7 +46,7 @@ docker compose down
 
 ## Database schema
 
-Auth tables + app tables (`documents`, `chats`, `chat_messages`, `chat_message_documents`) live in `db/schema.ts` and `db/auth-schema.ts`.
+Auth tables + app tables (`documents`, `document_jobs`, `chats`, `chat_messages`, `chat_message_documents`) live in `db/schema.ts` and `db/auth-schema.ts`.
 
 Apply schema:
 

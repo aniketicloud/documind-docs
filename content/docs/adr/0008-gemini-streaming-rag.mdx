@@ -1,0 +1,92 @@
+---
+title: "ADR-0008: Gemini free tier + streaming RAG"
+description: Provider, retrieval scope, and streaming choices for document-grounded chat.
+---
+
+## Status
+
+Accepted (implemented as Options **B2** + **B3**)
+
+## Context
+
+Documind’s north star is *chat grounded in the user’s documents*, not a generic chatbot. Option **A** already provided async ingest jobs and document statuses. Remaining choices:
+
+1. Which model provider for embeddings + generation?  
+2. When is a document eligible for retrieval?  
+3. Which documents enter the prompt on each turn?  
+4. Stream tokens or wait for a full reply?  
+5. Text-only parsers first, or PDF quality first?
+
+## Decision
+
+### 1. Google Gemini for embeddings and optional chat (Interactions API)
+
+- **SDK:** `@google/genai` only — **no** `@google/generative-ai` / `generateContent`  
+- **Chat:** Interactions API, default model `gemini-3.1-flash-lite` (`GEMINI_CHAT_MODEL`), `store: false`  
+- **Embed:** `gemini-embedding-2` at 768-d (`GEMINI_EMBED_MODEL`, `GEMINI_EMBED_DIMENSIONS`)  
+- **Auth:** `GEMINI_API_KEY` in local `.env` only (never committed)  
+- **Also:** Z.AI `glm-4.7-flash` as default selectable chat model when configured  
+
+**Why:** Align with Google’s June 2026 Interactions GA recommendation; modern embedding space; dual chat providers for quota resilience.
+
+### 2. Qdrant for vectors; payload filters for isolation
+
+- Collection default `documind_chunks`  
+- Points store chunk text + `userId` + `documentId`  
+- Search always filters by authenticated user and the selected document IDs  
+
+**Why:** Qdrant was already in Compose; ownership filters match multi-user safety.
+
+### 3. Indexed-only retrieval
+
+Only documents with status **`indexed`** contribute chunks. Attachments that are still processing or failed yield an explicit user-facing message, not invented content.
+
+**Why:** status honesty; avoids “I answered from a half-processed file.”
+
+### 4. Turn-attached documents only
+
+RAG uses `documentIds` from the **current** user message, not all of the user’s library and not prior-turn attachments unless re-attached.
+
+**Why:** user-controlled context; simpler privacy story; matches “attach what this question is about.”
+
+### 5. Stream generation with B2 (ship B3 together)
+
+- APIs return `text/plain` token streams  
+- Assistant row is written **after** the stream completes (no placeholder row on create)  
+- UI streams tokens into a temporary assistant bubble  
+
+**Why:** modern chat UX; B2 without streaming feels unfinished for demos.
+
+### 6. Text extractors first (txt / md / csv)
+
+PDF/DOCX parsers deferred to Option **F**. Unsupported types may still reach storage `indexed` without vectors.
+
+**Why:** prove full path quickly; heavy parsers stay in the worker, not on upload (ADR-0007).
+
+## Consequences
+
+### Positive
+
+- End-to-end “ask my file” works for text documents  
+- Upload path stays fast  
+- Clear product rules (indexed + attached turn)  
+- Streaming feels product-like early  
+
+### Negative / trade-offs
+
+- Free-tier rate limits and sequential embeds slow large files  
+- PDF/Word content still not searchable  
+- Plain-text streams lack structured citation events  
+- Gemini API key must be rotated if ever pasted into chat or logs  
+
+### Follow-ups
+
+- Option **F** — richer parsers + page metadata  
+- Citations UI (P1.7)  
+- Option **D** — rate limits, secret management, deploy  
+
+## Related
+
+- [RAG chat guide](/docs/guide/rag-chat)  
+- [Document ingest](/docs/guide/document-ingest)  
+- [ADR-0007](/docs/adr/0007-no-parse-on-upload)  
