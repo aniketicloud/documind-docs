@@ -5,6 +5,7 @@
     "installation",
     "local-development",
     "environment",
-    "docker"
+    "docker",
+    "document-ingest"
   ]
 }

@@ -39,7 +39,16 @@ Max size: **50MB**. Images/audio/video/executables rejected.
 - Storage keys are not returned to the client on presign  
 - Download uses short-lived presigned GET after ownership check  
 
+## Ingest (Option A) vs upload
+
+**Upload** stores the file in RustFS. **Ingest** is a background job (`npm run worker:ingest`) that validates the object and marks the document `indexed` (or `failed`).
+
+- Chat chips only show **upload** progress.  
+- **My documents** shows ingest badges (`processing` → `indexed`).  
+
+Full plain-language guide: [Document ingest (Option A)](/docs/guide/document-ingest).
+
 ## Parsing / RAG
 
-Not implemented. Upload stores bytes only. Future: async extract → chunk → Qdrant.  
-See architecture docs for the planned approach.
+Not fully implemented. Option A does a light check only (object readable; simple text non-empty).  
+Future: extract → chunk → embed → Qdrant → real chat answers.

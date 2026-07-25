@@ -40,6 +40,12 @@ Markdown/MDX lives in `content/docs/`:
 3. Build: `npm run build` — no app secrets required.  
 4. Point a custom domain if desired (e.g. `docs.example.com`).  
 
+## Roadmap (what to build next in the app)
+
+See **[ROADMAP.md](./ROADMAP.md)** or  
+[http://localhost:3001/docs/development/roadmap](http://localhost:3001/docs/development/roadmap)  
+for architect-level pending work and option IDs (`Do A`, `Do B2`, …).
+
 ## Related
 
 - Application: sibling folder `../documind`  

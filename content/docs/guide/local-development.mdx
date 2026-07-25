@@ -7,7 +7,11 @@ description: Day-to-day workflow for Documind.
 
 1. **Docker** — keep compose running  
 2. **App** — `npm run dev` in `documind`  
-3. **Docs** (optional) — `npm run dev` in `documind-docs` on port **3001**
+3. **Ingest worker** — `npm run worker:ingest` in `documind` (needed for document `indexed` status)  
+4. **Docs** (optional) — `npm run dev` in `documind-docs` on port **3001**  
+
+Without the worker, uploads still save files, but documents may stay **`processing`**.  
+See [Document ingest](/docs/guide/document-ingest) for a plain-language explanation.
 
 ## Ports cheat sheet
 

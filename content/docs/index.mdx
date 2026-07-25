@@ -23,9 +23,11 @@ This site documents the **application repository** (`documind`), not this docs p
 | Section | Contents |
 |--------|----------|
 | [Guide](/docs/guide/getting-started) | Install, env, Docker, local dev |
+| [Document ingest](/docs/guide/document-ingest) | **What Option A / worker:ingest means** |
 | [Product](/docs/product/features) | Features and user flows |
 | [Architecture](/docs/architecture/overview) | System design, data model, API |
 | [Development](/docs/development/conventions) | Conventions for contributors |
+| [Roadmap](/docs/development/roadmap) | **Pending work & choose next option** |
 | [ADR](/docs/adr/0001-record-architecture-decisions) | Architecture decision records |
 
 ## Related repos
@@ -44,9 +46,13 @@ docker compose up -d
 npm install
 npm run db:push
 npm run dev
+# second terminal — required for document status "indexed"
+npm run worker:ingest
 ```
 
 App: [http://localhost:3000](http://localhost:3000)  
 These docs (local): [http://localhost:3001/docs](http://localhost:3001/docs)
+
+New to ingest / the worker? Read [Document ingest (Option A)](/docs/guide/document-ingest).
 
 Continue with [Getting started](/docs/guide/getting-started).
