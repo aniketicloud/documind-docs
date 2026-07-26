@@ -24,12 +24,13 @@ Deep dive: [RAG chat (B2+B3)](/docs/guide/rag-chat) · [ADR-0008](/docs/adr/0008
 
 ## Creating a chat
 
-1. User types and/or attaches documents  
+1. User types and/or attaches documents on `/new`  
 2. **Send** calls `POST /api/chats/stream`  
 3. Server creates `chats` + user message (no placeholder assistant)  
-4. Streams Gemini over `text/plain`; saves assistant when done  
-5. Header `X-Chat-Id` — client navigates to `/c/{id}`  
-6. Double-submit blocked with a sync lock while streaming  
+4. Tokens stream **on `/new`** into the live assistant bubble  
+5. When the stream finishes, client seeds a **handoff** (messages + title) and `router.replace` → `/c/{id}`  
+6. `/c/{id}` paints from handoff immediately (no “Loading chat…” wipe), then revalidates from the API in the background  
+7. Double-submit blocked with a sync lock while streaming  
 
 ## Continuing a chat
 
@@ -45,15 +46,28 @@ Deep dive: [RAG chat (B2+B3)](/docs/guide/rag-chat) · [ADR-0008](/docs/adr/0008
 - `GET /api/models` returns only configured providers  
 - Gemini path: `@google/genai` → `interactions.create` (not legacy `generateContent`)  
 
+## Chat-scoped documents
+
+Documents can be **pinned to a chat** (`chat_documents` table). RAG uses the full pin set on **every** message until the user unpins.
+
+| Behavior | Detail |
+|----------|--------|
+| First send with files | Those docs are pinned to the new chat |
+| Library picker (existing chat) | Toggle pins / unpins immediately |
+| Composer “In this chat” | Shows pinned docs; X removes from scope |
+| Follow-up messages | No need to re-attach; scoped IDs are used for retrieval |
+| API | `GET/POST/PUT/DELETE /api/chats/:id/documents` |
+
 ## RAG product rules
 
 | Rule | Behavior |
 |------|----------|
-| **Indexed only** | Non-indexed attachments → explicit “not ready” style answer, not invented content |
-| **This turn only** | Only `documentIds` on the message being sent are searched |
+| **Indexed only** | Non-indexed pins → explicit “not ready” style answer for those files |
+| **Chat scope ∪ turn** | Pinned chat docs + any new ids on this send |
 | **Library picker** | Lists **indexed** documents (RAG-ready) |
-| **Fresh upload** | Chip = stored; wait for My documents `indexed` before expecting file-aware answers |
-| **No attachments** | General chat (no Qdrant); any configured generation model works |
+| **Fresh upload** | Chip = stored; pin when indexed (or on next send after ingest) |
+| **No pins and no text** | Cannot send empty; with pins only, can ask e.g. “summarize” |
+| **No pins and no attachments** | General chat (no Qdrant); any configured generation model works |
 
 ## Sidebar
 

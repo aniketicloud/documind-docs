@@ -34,7 +34,11 @@ All app APIs below expect an authenticated session unless noted.
 | `PATCH` | `/api/chats/:id` | Rename |
 | `DELETE` | `/api/chats/:id` | Delete chat + messages |
 | `POST` | `/api/chats/:id/messages` | Append user message only (no AI) |
-| `POST` | `/api/chats/:id/messages/stream` | Append user + stream Gemini RAG reply |
+| `POST` | `/api/chats/:id/messages/stream` | Append user + stream RAG (uses **chat-scoped** docs ∪ turn ids) |
+| `GET` | `/api/chats/:id/documents` | List documents pinned to the chat |
+| `POST` | `/api/chats/:id/documents` | Pin more documents (`{ documentIds }`) |
+| `PUT` | `/api/chats/:id/documents` | Replace pin set |
+| `DELETE` | `/api/chats/:id/documents?documentId=` | Unpin one document |
 
 ### Stream body & RAG rules
 

@@ -36,9 +36,11 @@ description: Postgres tables used by Documind.
 
 `chat_messages` — `role` (`user` \| `assistant`), `content`, `chat_id`
 
-`chat_message_documents` — many-to-many message ↔ document (defines **this-turn** RAG scope)
+`chat_message_documents` — many-to-many message ↔ document (history of turn attachments)
 
-Deleting a chat cascades messages and join rows; **documents remain**.
+`chat_documents` — many-to-many **chat ↔ document** (pinned RAG scope for the whole conversation)
+
+Deleting a chat cascades messages and chat_documents; **documents remain**.
 
 ## Vectors (not in Postgres)
 
