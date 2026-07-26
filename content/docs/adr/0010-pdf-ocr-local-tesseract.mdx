@@ -1,0 +1,39 @@
+---
+title: "ADR-0010: Local PDF OCR with OCRmyPDF + Tesseract"
+description: Free open-source OCR for scanned PDFs inside the existing pdf-extract service.
+---
+
+## Status
+
+Accepted (F1b implemented)
+
+## Context
+
+F1 extracted **native** PDF text with PyMuPDF. Scanned PDFs produced no text and failed ingest. We needed OCR that is:
+
+- Free / open source  
+- Local (no cloud Vision APIs)  
+- Same service API as F1 (no redesign of Node ingest)
+
+## Decision
+
+1. Keep **`pdf-extract`** as the only PDF extract service.  
+2. OCR with **Tesseract**: render each page via **PyMuPDF** → **pytesseract** (not OCRmyPDF).  
+3. Support `ocr=off|auto|force`; default worker mode **`auto`**.  
+4. Cap OCR at **30 pages**; language **`eng`**.  
+5. If still no text after OCR → document **`failed`**.
+
+### Why not OCRmyPDF?
+
+We hit a runtime break (`pikepdf.Pdf` has no `check`) between OCRmyPDF and current pikepdf.  
+Page-render + Tesseract is simpler, free, and works well for screenshot PDFs.
+
+## Consequences
+
+- Scanned / screenshot PDFs can become RAG-ready.  
+- Image size and OCR runtime increase.  
+- DOCX remains a separate later feature.
+
+## Related
+
+- [PDF extract & OCR (plain language)](/docs/guide/pdf-extract)  

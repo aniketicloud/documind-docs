@@ -1,67 +1,155 @@
 ---
-title: PDF extract (F1)
-description: How PDF text extraction works with Docker, PyMuPDF, and the ingest worker — and how OCR will plug in later without rework.
+title: PDF extract & OCR
+description: How and why Documind extracts text from PDFs — native text first, free local OCR for scans — in simple language.
 ---
 
-# PDF extract (Option F1)
+# PDF extract & OCR (F1 + F1b)
 
-Documind extracts **native text** from PDFs with a small **Python service** (PyMuPDF).  
-OCR for scanned PDFs is planned as **F1b** inside the **same service** (not a rewrite).
-
----
-
-## Why Python in Docker?
-
-| Approach | Why we chose it |
-|----------|-----------------|
-| Separate **pdf-extract** container | Keeps Next.js free of native PDF deps |
-| **PyMuPDF** | Free/OSS, fast for digital (selectable) text |
-| Stable HTTP API | OCR later = same URL, more options |
-| **ingest-worker** in Compose | No separate host worker process for daily use |
+This page explains **how** Documind turns PDFs into searchable text for chat, and **why** we built it this way — so you can explain it to others without jargon.
 
 ---
 
-## How it runs
+## The problem in one sentence
+
+Chat can only answer from **text**. Many PDFs are **pictures of pages** (scans). Those have **no selectable text**, so we need **OCR** (optical character recognition) — software that “reads” the image and types out the words.
+
+---
+
+## Two kinds of PDF
+
+| Kind | What it is | What we do |
+|------|------------|------------|
+| **Text PDF** | You can select/copy words in a PDF reader | **Fast path:** pull the text out directly (**PyMuPDF**) |
+| **Scanned PDF** | Each page is basically an image | **OCR path:** render page → **Tesseract** (free, local) |
+
+Most “born digital” PDFs (exports from Word, reports, invoices) are text PDFs.  
+Phone photos of paper, or many scanner outputs, are scanned PDFs.
+
+---
+
+## How it works (simple flow)
 
 ```text
-docker compose up -d
-  ├── postgres, redis, qdrant, rustfs
-  ├── pdf-extract   (:8090)   ← Python / PyMuPDF
-  └── ingest-worker           ← Node job loop (internal Docker network)
-
-npm run dev                   ← only process you run by hand for the app
+You upload a PDF
+       ↓
+Stored in RustFS (fast; no heavy work yet)
+       ↓
+Docker “ingest-worker” picks up a job
+       ↓
+Calls Docker “pdf-extract” service
+       ↓
+  1) Try native text (PyMuPDF)     ← free, seconds
+  2) If almost no text and mode=auto
+        → render pages → Tesseract OCR  ← free, slower
+       ↓
+Worker chunks the text → embeds → Qdrant
+       ↓
+Status: indexed  (ready for chat)
+   or: failed    (still no useful text)
 ```
 
-| Service | Host port | Role |
-|---------|-----------|------|
-| `pdf-extract` | **8090** | `POST /extract` → plain text |
-| `ingest-worker` | (none) | Claim jobs → extract → embed → Qdrant |
+You still only run:
 
-Worker uses **internal** URLs (`http://pdf-extract:8090`, `http://rustfs:9000`, …).  
-Your `.env` for **Next.js on the host** still uses `localhost` ports.
+```bash
+docker compose up -d
+npm run dev
+```
 
----
-
-## Pipeline for a PDF
-
-1. Browser uploads PDF → RustFS (unchanged)  
-2. Confirm enqueues ingest job  
-3. **ingest-worker** downloads bytes  
-4. `POST http://pdf-extract:8090/extract?ocr=off` with PDF body  
-5. If text OK → chunk → Gemini embed → Qdrant → **`indexed`**  
-6. If no text → **`failed`** with message (scanned PDF; OCR not enabled yet)
-
-`.txt` / `.md` / `.csv` still extract **inside Node** (no Python).
+No separate OCR install on Windows — it’s **inside Docker**.
 
 ---
 
-## Empty / scanned PDFs (F1)
+## Why we designed it this way
 
-With `ocr=off`:
+### 1. Upload stays fast
 
-- No selectable text → status **`failed`**  
-- Error explains scanned/image PDF and that OCR is not enabled  
-- After **F1b**, set `ocr=auto` so those files can recover without a new architecture  
+We **never** OCR inside the browser upload request. That would hang the UI.  
+Heavy work runs in the **background** (same idea as the rest of ingest).
+
+### 2. One service, two strategies (no rework later)
+
+We did **not** build “text PDF app” then throw it away for OCR.
+
+| Stage | What we shipped |
+|-------|-----------------|
+| **F1** | Native text only (`ocr=off`) |
+| **F1b** | Same API: `ocr=auto` / `force` with Tesseract |
+
+The HTTP contract stayed:
+
+```http
+POST /extract?ocr=auto
+Content-Type: application/pdf
+→ { text, pageCount, method, ocrUsed, warnings, reason }
+```
+
+Node only cares: **“give me plain text.”** It does not care *how* text was obtained.
+
+### 3. Free and open source
+
+| Tool | Role | Cost |
+|------|------|------|
+| **PyMuPDF** | Native text | Free / local |
+| **Tesseract** | OCR engine (reads page images) | Free (Apache-2.0) |
+| **Pillow + pytesseract** | Image bridge to Tesseract | Free / OSS |
+| **No** Google Vision / AWS Textract | — | Avoided (paid / data leaves machine) |
+
+### 4. Smart default: `auto`
+
+| Mode | Meaning |
+|------|---------|
+| **`auto`** (default) | Try native first; OCR only if text is too thin |
+| **`off`** | Native only (debug / fastest) |
+| **`force`** | Always OCR (slow; for broken “fake” text layers) |
+
+So normal text PDFs stay **fast**. Scans pay the OCR cost only when needed.
+
+### 5. Protect free machines
+
+OCR is **CPU-heavy**. Caps:
+
+| Cap | Default | Why |
+|-----|---------|-----|
+| `PDF_OCR_MAX_PAGES` | **30** | Don’t OCR a 300-page scan by accident |
+| `PDF_EXTRACT_TIMEOUT_MS` | **300000** (5 min) | Allow slow jobs without hanging forever |
+| Language | **`eng`** | Smaller Docker image |
+
+---
+
+## What you tell someone in 30 seconds
+
+> “We store the PDF first. A background worker asks a small Docker service for text. If the PDF already has real text, we take it instantly. If it’s a scan or screenshot PDF, the service turns each page into an image and runs free open-source Tesseract OCR. Then we chunk, embed, and answer questions. Nothing is sent to a paid OCR cloud.”
+
+---
+
+## Statuses you’ll see
+
+| Status | Meaning |
+|--------|---------|
+| **processing** | Worker is extracting (OCR can take a while) |
+| **indexed** | We got enough text and built search vectors |
+| **failed** | Still almost no text (blank scan, bad quality, encrypted PDF, service down) |
+
+**Retry ingest** on My documents after fixing Compose or re-uploading.
+
+---
+
+## Modes and env (operators)
+
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `PDF_OCR_MODE` | `auto` | **ingest-worker** → query param `ocr=` |
+| `PDF_EXTRACT_URL` | host `http://127.0.0.1:8090` | Host tools; worker overrides to `http://pdf-extract:8090` |
+| `PDF_EXTRACT_TIMEOUT_MS` | `300000` | Node HTTP client |
+| `PDF_OCR_MAX_PAGES` | `30` | pdf-extract container |
+| `PDF_OCR_LANG` | `eng` | Tesseract language |
+
+Rebuild after code changes:
+
+```bash
+docker compose build pdf-extract ingest-worker
+docker compose up -d pdf-extract ingest-worker
+```
 
 ---
 
@@ -69,24 +157,23 @@ With `ocr=off`:
 
 | Method | Path | Notes |
 |--------|------|--------|
-| `GET` | `/health` | Healthcheck |
-| `POST` | `/extract?ocr=off` | F1 supported |
-| `POST` | `/extract?ocr=auto\|force` | **501** until F1b |
+| `GET` | `/health` | Includes `ocr: true` when F1b image is up |
+| `POST` | `/extract?ocr=off\|auto\|force` | Body = raw PDF bytes |
 
 ---
 
-## Env
+## Limits (honest)
 
-| Variable | Host (Next / rare local worker) | Inside `ingest-worker` container |
-|----------|----------------------------------|----------------------------------|
-| `PDF_EXTRACT_URL` | `http://127.0.0.1:8090` | `http://pdf-extract:8090` (compose override) |
-| `GEMINI_API_KEY` | in `.env` | from `env_file: .env` |
+- OCR quality is **good enough for many scans**, not perfect (skew, handwriting, multi-column).  
+- Long scans are **slow** — that is normal.  
+- **DOCX / Word** is a separate later feature (not this service).  
+- **Sources footer** (show which chunks were used) is separate polish.
 
 ---
 
-## Next (F1b / Sources)
+## Related
 
-1. **F1b** — Tesseract / OCRmyPDF in the same image; `ocr=auto` when native text is short  
-2. **Sources footer** — show which doc/chunks the answer used  
-
-Related: [Document ingest](/docs/guide/document-ingest) · [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant)
+- [Document ingest](/docs/guide/document-ingest)  
+- [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant)  
+- [RAG chat](/docs/guide/rag-chat)  
+- [Docker services](/docs/guide/docker)  

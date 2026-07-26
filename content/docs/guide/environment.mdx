@@ -82,10 +82,13 @@ Required for ingest embeddings and chat retrieval. Start with `docker compose up
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
-| `PDF_EXTRACT_URL` | `http://127.0.0.1:8090` | Host URL for the PyMuPDF service (compose worker overrides to `http://pdf-extract:8090`) |
-| `PDF_EXTRACT_TIMEOUT_MS` | `120000` | Optional timeout for extract HTTP call |
+| `PDF_EXTRACT_URL` | `http://127.0.0.1:8090` | Host URL (compose worker uses `http://pdf-extract:8090`) |
+| `PDF_OCR_MODE` | `auto` | `off` \| `auto` \| `force` — auto = native then OCR |
+| `PDF_EXTRACT_TIMEOUT_MS` | `300000` | HTTP timeout (OCR can be slow) |
+| `PDF_OCR_MAX_PAGES` | `30` | Max pages for OCR path (compose → pdf-extract) |
+| `PDF_OCR_LANG` | `eng` | Tesseract language pack |
 
-Compose services: `pdf-extract`, `ingest-worker`. See [PDF extract](/docs/guide/pdf-extract).
+Compose services: `pdf-extract`, `ingest-worker`. See [PDF extract & OCR](/docs/guide/pdf-extract).
 
 ## Docs site
 

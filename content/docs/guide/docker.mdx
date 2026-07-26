@@ -43,9 +43,10 @@ docker compose logs -f redis
 ## pdf-extract
 
 - Port **8090**
-- Build context: `services/pdf-extract` (Python + PyMuPDF)
-- F1: native PDF text only (`ocr=off`); OCR later in the same service
-- See [PDF extract](/docs/guide/pdf-extract)
+- Build context: `services/pdf-extract` (Python + PyMuPDF + **Tesseract** via pytesseract)
+- `ocr=auto` by default from worker: native first, OCR if scan
+- Caps: `PDF_OCR_MAX_PAGES` (default 30), language `eng`
+- See [PDF extract & OCR](/docs/guide/pdf-extract)
 
 ## ingest-worker
 

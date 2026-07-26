@@ -9,6 +9,7 @@
     "0006-redis-protected-mode",
     "0007-no-parse-on-upload",
     "0008-gemini-streaming-rag",
-    "0009-gemini-interactions-embedding-2"
+    "0009-gemini-interactions-embedding-2",
+    "0010-pdf-ocr-local-tesseract"
   ]
 }

@@ -1,34 +1,27 @@
 # Documind app roadmap
 
-Canonical plan:
+Canonical plan: **[Development → Product roadmap](./content/docs/development/roadmap.mdx)**
 
-**[Development → Product roadmap](./content/docs/development/roadmap.mdx)**
+## Status
 
-[http://localhost:3001/docs/development/roadmap](http://localhost:3001/docs/development/roadmap)
-
-## Quick status
-
-| Option | Status |
+| Slice | Status |
 |--------|--------|
-| **A** Ingest foundation | Done (Docker **ingest-worker**) |
-| **B2+B3** Text RAG + streaming | Done |
-| **F1** Text-based PDF (PyMuPDF) | Done |
-| **F1b** OCR scanned PDFs | Next engineering |
-| **Sources footer** | Next polish (after / with F1b) |
-| **D** Production hardening | Open |
-| **E** UX polish | Open |
+| A Ingest + Docker worker | Done |
+| B2+B3 RAG streaming | Done |
+| F1 Text PDF (PyMuPDF) | Done |
+| **F1b PDF OCR (Tesseract)** | **Done** |
+| DOCX | Later (when PDF stable) |
+| Sources footer | Next polish |
+| D Hardening | Open |
 
-**Daily run:** `docker compose up -d` + `npm run dev` (no host worker command).
+## Daily run
 
-## What works for chat RAG
+```bash
+docker compose up -d   # pdf-extract (OCR) + ingest-worker + infra
+npm run dev
+```
 
-- `.txt` / `.md` / `.csv`  
-- **Text-based PDFs** (selectable text) via **pdf-extract**  
-- Chat-scoped pinned documents  
+## Explain simply
 
-## Guides
-
-- [Document ingest](./content/docs/guide/document-ingest.mdx)  
-- [PDF extract](./content/docs/guide/pdf-extract.mdx)  
-- [Embeddings & Qdrant](./content/docs/guide/embeddings-and-qdrant.mdx)  
-- [RAG chat](./content/docs/guide/rag-chat.mdx)  
+- **PDF + OCR:** [PDF extract & OCR](./content/docs/guide/pdf-extract.mdx)  
+- **Chat documents panel** (select / collapse): [Chat product](./content/docs/product/chat.mdx)  

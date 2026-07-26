@@ -46,10 +46,10 @@ Max size: **50MB**. Images/audio/video/executables rejected.
 | **Upload** | Bytes in RustFS; chat chip “done” |
 | **Ingest** | Worker prepares the file (text extract + embeddings when possible) |
 | **Indexed** | Ingest succeeded; text files can be used for RAG |
-| **Chat attach** | This turn’s `documentIds` for retrieval (must be indexed to contribute chunks) |
+| **Chat panel** | Files in this chat; checkboxes choose which are sent as `documentIds` for the next answer |
 
-- Chat chips only show **upload** progress.  
-- **My documents** shows ingest badges (`processing` → `indexed` / `failed`).  
+- **My documents** shows full ingest badges (`processing` → `indexed` / `failed`).  
+- **Chat documents panel** shows status + select/deselect + remove from chat (collapsible).  
 
 **Why split them:** uploads must stay fast; AI prep is slow and retriable. See [Document ingest](/docs/guide/document-ingest).
 
@@ -58,10 +58,10 @@ Max size: **50MB**. Images/audio/video/executables rejected.
 | Type | Ingest behavior |
 |------|-----------------|
 | `.txt`, `.md`, `.csv` | Node extract → chunk → Gemini embed → Qdrant |
-| **Text-based PDF** | Docker **pdf-extract** (PyMuPDF) → same embed path → RAG-ready when **`indexed`** |
-| Scanned / image PDF | Usually **`failed`** (no native text; OCR later) |
-| Word / Excel (binary) | Storage OK; full text extract not complete yet |
+| **Text-based PDF** | Docker **pdf-extract** (PyMuPDF, fast) → embed → RAG when **`indexed`** |
+| **Scanned / image PDF** | Same service runs **OCR** (`auto`) → RAG if text found; else **`failed`** |
+| Word / Excel (binary) | Storage OK; full DOCX extract planned later |
 
-Chat uses **retrieved chunks** from **chat-scoped indexed** docs. See [RAG chat](/docs/guide/rag-chat) and [PDF extract](/docs/guide/pdf-extract).
+Chat uses **retrieved chunks** from **selected + indexed** panel docs. See [Chat](/docs/product/chat), [RAG chat](/docs/guide/rag-chat), and [PDF extract](/docs/guide/pdf-extract).
 
 Ingest requires **`docker compose up -d`** (services `ingest-worker` + `pdf-extract`).

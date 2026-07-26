@@ -21,8 +21,8 @@ See [Authentication](/docs/product/auth).
 - **New chat** → `/new` (empty composer)  
 - First send creates a chat, **streams** a Gemini answer, navigates to `/c/[id]`  
 - **Recent** sidebar: rename, delete  
-- **RAG rules:** **indexed** documents **pinned to the chat** (chat-scoped)  
-- **Searchable today:** `.txt` / `.md` / `.csv` and **text-based PDFs**  
+- **RAG rules:** **checked + indexed** docs in the collapsible chat documents panel  
+- **Searchable today:** `.txt` / `.md` / `.csv`, **text PDFs**, and **scanned PDFs** (local OCR)  
 
 See [Chat](/docs/product/chat) and [RAG chat guide](/docs/guide/rag-chat).
 
@@ -33,7 +33,7 @@ See [Chat](/docs/product/chat) and [RAG chat guide](/docs/guide/rag-chat).
 - Owner-only isolation  
 - Ingest: `processing` → `indexed` / `failed` (Docker **`ingest-worker`** + **`pdf-extract`**)  
 - Allowed types: PDF, Word, Excel, CSV, TXT, Markdown, RTF, ODT/ODS  
-- **RAG-ready:** text files + text-based PDFs when status is **indexed**  
+- **RAG-ready:** text files + PDFs (native or OCR) when status is **indexed**  
 
 See [Documents](/docs/product/documents), [Document ingest](/docs/guide/document-ingest), [PDF extract](/docs/guide/pdf-extract).
 

@@ -157,7 +157,7 @@ If you previously indexed with `text-embedding-004`, treat old vectors as **obso
 2. App `.env` has the embed settings above  
 3. **My documents** → **Retry ingest** on each file (or re-upload)  
 4. Wait for status **`indexed`**  
-5. Chat → pin under **In this chat** → ask  
+5. Chat → add file in the documents panel (checked + **Indexed**) → ask  
 
 If Compose is not running, files stay `processing` and RAG has nothing useful.
 
@@ -217,7 +217,7 @@ Checklist:
 2. Worker running?  
 3. Text type (`.txt` / `.md` / `.csv`) or **text-based PDF** with real content?  
 4. Re-ingested **after** the embed model migration?  
-5. File **pinned** to this chat (**In this chat**)?
+5. File in the chat **documents panel**, **checked**, and status **Indexed**?
 
 ### “Can I use 1536 dimensions?”
 

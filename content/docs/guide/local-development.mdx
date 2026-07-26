@@ -53,13 +53,13 @@ See [UI conventions](/docs/development/ui).
 1. Set `GEMINI_API_KEY` in `.env`  
 2. `docker compose up -d` (Qdrant, **pdf-extract**, **ingest-worker**, …)  
 3. `npm run dev`  
-4. Upload a `.txt` or **text-based PDF** → **indexed** → pin to chat → ask  
+4. Upload a `.txt` or **PDF** → appears in chat documents panel → **Indexed** → ask  
 
 See [RAG chat](/docs/guide/rag-chat) and [PDF extract](/docs/guide/pdf-extract).
 
 ## Known gaps (product)
 
-- Scanned PDFs need **OCR (F1b)**; DOCX/XLSX full extract still open  
+- DOCX/XLSX full extract still open (PDF + OCR done)  
 - No citation / sources footer yet  
 - Dashboard route still exists but is not the primary UX  
 - Production rate limits / secret management still thin (option **D**)  

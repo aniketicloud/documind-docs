@@ -26,7 +26,7 @@ Plain-language record of **document-grounded chat** and product rules.
 |------|--------------|--------|
 | **Upload** | Chip “done”; file on **My documents** | Presigned PUT to RustFS; Postgres row |
 | **Ingest** | Badge `processing` → `indexed` | Compose **`ingest-worker`** + **`pdf-extract`** for PDFs |
-| **Chat** | Live streaming reply | **Chat-scoped** (pinned) **indexed** docs |
+| **Chat** | Live streaming reply | **Selected** (checked) **indexed** docs from the chat panel |
 
 ---
 
@@ -39,7 +39,7 @@ When Compose **`ingest-worker`** claims a job it:
 1. Downloads the object from RustFS  
 2. Extracts text:  
    - **`.txt` / `.md` / `.csv`** — Node  
-   - **Text-based `.pdf`** — HTTP to **`pdf-extract`** (PyMuPDF)  
+   - **`.pdf`** — HTTP to **`pdf-extract`** (PyMuPDF; **OCR** if scanned and `ocr=auto`)  
 3. Chunks → embeds with **`gemini-embedding-2`** → Qdrant  
 4. Marks **`indexed`** or **`failed`**
 
@@ -48,15 +48,16 @@ When Compose **`ingest-worker`** claims a job it:
 | Endpoint | Role |
 |----------|------|
 | `POST /api/chats/stream` | Create chat + user message → stream → save |
-| `POST /api/chats/:id/messages/stream` | Append + stream (uses **chat-scoped** docs) |
+| `POST /api/chats/:id/messages/stream` | Append + stream (`documentIds` = panel selection) |
 
 ### Product rules
 
 | Rule | Why |
 |------|-----|
 | **Indexed-only RAG** | Honest status; no fake answers from half-processed files |
-| **Chat-scoped pins** | Docs stay on the chat until unpinned — no re-attach every turn |
-| **Upload ≠ AI** | Chips = stored; **indexed** = searchable |
+| **Documents panel** | Pins stay until removed; checkboxes choose files for the next answer |
+| **Collapsible panel** | More room for messages when collapsed |
+| **Upload ≠ AI** | Upload can finish while status is still Processing… |
 | **Streaming** | Live tokens in the UI |
 | **Multi-model** | Z.AI GLM + Gemini Interactions; default often GLM |
 
@@ -67,9 +68,9 @@ When Compose **`ingest-worker`** claims a job it:
 | File type | After successful ingest |
 |-----------|-------------------------|
 | `.txt`, `.md`, `.csv` | Vectors → usable for RAG |
-| **Text-based PDF** | Vectors via PyMuPDF extract → usable for RAG |
-| Scanned PDF | Usually **`failed`** (no native text; OCR = F1b) |
-| Other office binaries | May be storage-only until more parsers |
+| **Text-based PDF** | Fast native extract → RAG |
+| **Scanned PDF** | OCR (Tesseract) → RAG if text found; else **`failed`** |
+| Other office binaries | May be storage-only until DOCX extract |
 
 ---
 
@@ -84,8 +85,8 @@ npm run dev
 
 1. Upload a short **text PDF** or `.txt` in **My documents**  
 2. Wait for **`indexed`**  
-3. New chat → pin under **In this chat** / library  
-4. Ask a question → answer **streams**  
+3. New chat → add files (panel above messages) → **check** the ones to use  
+4. Wait for **Indexed** if needed → ask a question → answer **streams**  
 
 ---
 
@@ -108,8 +109,7 @@ npm run dev
 
 | Item | Notes |
 |------|--------|
-| OCR for scanned PDFs | F1b — same pdf-extract service |
-| DOCX / XLSX full extract | Later parsers |
+| DOCX / XLSX full extract | Later (after PDF path stable) |
 | Sources footer | Show which chunks were used |
 | Stop / regenerate | Chat controls |
 

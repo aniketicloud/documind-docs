@@ -68,7 +68,7 @@ flowchart TB
 | Redis | Queue + demo | Ingest job list + `/redis` playground |
 | Qdrant | **In use** | Chunk vectors; filtered search |
 | Document ingest pipeline | **A + B2** | Jobs, worker, extract/embed for text |
-| Document parsing | **Text + text PDF** | txt/md/csv + PyMuPDF; OCR / DOCX open |
+| Document parsing | **Text + PDF + OCR** | txt/md/csv + PyMuPDF + Tesseract; DOCX open |
 | RAG / embeddings | **Done (B2)** | Gemini embed + Qdrant |
 | LLM integration | **Done (B3)** | Streaming chat APIs + UI |
 | Production hardening | Thin | Secrets, rate limits, observability |
@@ -194,11 +194,11 @@ Document statuses:
 | ID | Item | Why | Status |
 |----|------|-----|--------|
 | P1.1–P1.2 | Job model + worker | Foundation | **Done (A)** |
-| P1.3 | Parsers (text + text PDF) | Unlock content | **F1 done; OCR/DOCX open** |
+| P1.3 | Parsers (text + PDF + OCR) | Unlock content | **F1 + F1b done** |
 | P1.4–P1.5 | Chunk + Qdrant + embeddings | RAG store | **Done (B2)** |
 | P1.6 | Chat RAG + LLM stream | Product value | **Done (B2+B3)** |
 | **P1.7** | **Sources footer** (doc/chunk) | Trust | **Next polish** |
-| **P1.8** | **OCR + DOCX/XLSX** | Scanned + Office | Open (**F1b** / later) |
+| **P1.8** | **DOCX / XLSX** | Office files | Later when PDF stable |
 
 ### P2 — Chat product depth
 
@@ -259,11 +259,11 @@ Would ignore document bytes. Superseded by B2/B3 for Documind’s north star.
 
 ### Option F — **PDF-capable ingest**
 
-- **F1 (done):** text-based PDF via Docker **pdf-extract** (PyMuPDF) + Compose **ingest-worker**  
-- **F1b (next engineering):** OCR (`ocr=auto`) for scanned PDFs in the same service  
-- **Later:** DOCX/XLSX  
+- **F1 (done):** text PDF via **pdf-extract** (PyMuPDF)  
+- **F1b (done):** OCR via **PyMuPDF render + Tesseract**, `PDF_OCR_MODE=auto`, 30-page OCR cap, free/local  
+- **Later:** DOCX when PDF path is stable  
 
-**Exit criteria F1:** text PDF → `indexed` with chunks → chat Q&A — **met**.
+**Exit criteria F1b:** scanned PDF → OCR → `indexed` (or honest `failed`) → chat when text found — **met**.
 
 ### Option G — **Docs / ops only**
 
@@ -298,7 +298,7 @@ Historical path that got us here: **A → B2 → B3**.
 - [x] Failures visible and retriable  
 - [x] ADRs for model + embed provider (ADR-0008)  
 - [x] Text PDF extraction (F1)  
-- [ ] OCR for scanned PDFs (F1b)  
+- [x] OCR for scanned PDFs (F1b)  
 - [ ] Citation UI  
 - [ ] Production hardening checklist  
 
@@ -309,8 +309,8 @@ Historical path that got us here: **A → B2 → B3**.
 Reply with one of:
 
 - ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ — **done**  
-- `Do F1b` — OCR for scanned PDFs  
 - `Do sources` — sources footer  
+- `Do DOCX` — Word extract (later)  
 - `Do D` — production hardening  
 - `Do E` — UX polish  
 - `Do G` — deploy docs to Vercel  

@@ -34,7 +34,7 @@ All app APIs below expect an authenticated session unless noted.
 | `PATCH` | `/api/chats/:id` | Rename |
 | `DELETE` | `/api/chats/:id` | Delete chat + messages |
 | `POST` | `/api/chats/:id/messages` | Append user message only (no AI) |
-| `POST` | `/api/chats/:id/messages/stream` | Append user + stream RAG (uses **chat-scoped** docs ∪ turn ids) |
+| `POST` | `/api/chats/:id/messages/stream` | Append user + stream RAG (`documentIds` = **selected** panel docs) |
 | `GET` | `/api/chats/:id/documents` | List documents pinned to the chat |
 | `POST` | `/api/chats/:id/documents` | Pin more documents (`{ documentIds }`) |
 | `PUT` | `/api/chats/:id/documents` | Replace pin set |
@@ -45,8 +45,10 @@ All app APIs below expect an authenticated session unless noted.
 Stream endpoints accept JSON `{ content?: string, documentIds?: string[], modelId?: string }`.
 
 - `modelId`: `glm-4.7-flash` | `gemini-3.1-flash-lite` (see `GET /api/models`)  
-- Retrieval uses only **owned** documents with status **`indexed`** among `documentIds`  
-- No `documentIds` → general chat (no retrieval)  
+- `documentIds`: files the user **checked** for this answer (not every pin)  
+- Retrieval uses only **owned** + **`indexed`** among those IDs  
+- Empty `documentIds` + text → general chat (no retrieval)  
+- Pins (list membership) are separate from selection; see [Chat](/docs/product/chat)  
 - Response is **token text** (`Content-Type: text/plain; charset=utf-8`)  
 - Full assistant message is saved when the stream completes  
 - Chat: Z.AI and/or Gemini **Interactions**; embeddings: `gemini-embedding-2`  

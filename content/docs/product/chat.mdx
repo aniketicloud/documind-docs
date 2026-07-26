@@ -1,6 +1,6 @@
 ---
 title: Chat
-description: Multi-chat UX, streaming RAG, and product rules for document context.
+description: Multi-chat UX, streaming RAG, collapsible document panel, and product rules for document context.
 ---
 
 ## Routes
@@ -15,59 +15,82 @@ description: Multi-chat UX, streaming RAG, and product rules for document contex
 
 Documind’s value is **answers grounded in your files**. Placeholders would train users that “chat works” while ignoring uploads. We therefore:
 
-1. Persist the **user** message first (with optional attachments)  
-2. Retrieve chunks only from **indexed** docs **on this turn**  
-3. Stream **Gemini** tokens into the UI  
+1. Persist the **user** message first  
+2. Retrieve chunks only from **selected, indexed** docs for this send  
+3. Stream model tokens into the UI  
 4. Persist the full **assistant** message when the stream ends  
 
-Deep dive: [RAG chat (B2+B3)](/docs/guide/rag-chat) · [ADR-0008](/docs/adr/0008-gemini-streaming-rag).
+Deep dive: [RAG chat](/docs/guide/rag-chat) · [ADR-0008](/docs/adr/0008-gemini-streaming-rag).
 
 ## Creating a chat
 
-1. User types and/or attaches documents on `/new`  
-2. **Send** calls `POST /api/chats/stream`  
-3. Server creates `chats` + user message (no placeholder assistant)  
+1. User types and/or adds documents on `/new` (they appear in the **documents panel**)  
+2. **Send** calls `POST /api/chats/stream` with `documentIds` = **checked** files  
+3. Server creates `chats` + user message (no placeholder assistant) and pins those docs  
 4. Tokens stream **on `/new`** into the live assistant bubble  
-5. When the stream finishes, client seeds a **handoff** (messages + title) and `router.replace` → `/c/{id}`  
-6. `/c/{id}` paints from handoff immediately (no “Loading chat…” wipe), then revalidates from the API in the background  
+5. When the stream finishes, client seeds a **handoff** and `router.replace` → `/c/{id}`  
+6. `/c/{id}` paints from handoff immediately, then revalidates from the API  
 7. Double-submit blocked with a sync lock while streaming  
 
 ## Continuing a chat
 
-- `POST /api/chats/:id/messages/stream` with optional `documentIds`  
+- `POST /api/chats/:id/messages/stream` with `documentIds` = currently **selected** panel docs  
+- Unselected pins stay in the chat list but are **not** sent for RAG  
 - User message stored first; assistant streams then saves  
-- UI shows optimistic bubbles, then reloads canonical messages  
 
 ## Model selector
 
-- Composer dropdown: **GLM 4.7 Flash** (Z.AI) and/or **Gemini 3.1 Flash-Lite** (Interactions API) when keys are set  
-- Choice is sent as `modelId` on stream requests and remembered in `localStorage`  
+- Composer dropdown: **GLM 4.7 Flash** (Z.AI) and/or **Gemini 3.1 Flash-Lite** when keys are set  
+- Choice is sent as `modelId` and remembered in `localStorage`  
 - Server default: `DEFAULT_CHAT_MODEL` (typically `glm-4.7-flash`)  
 - `GET /api/models` returns only configured providers  
-- Gemini path: `@google/genai` → `interactions.create` (not legacy `generateContent`)  
 
-## Chat-scoped documents
+## Documents panel (collapsible)
 
-Documents can be **pinned to a chat** (`chat_documents` table). RAG uses the full pin set on **every** message until the user unpins.
+Files for the chat live in a **panel under the header, above the messages** — not as chips in the composer.
 
-| Behavior | Detail |
-|----------|--------|
-| First send with files | Those docs are pinned to the new chat |
-| Library picker (existing chat) | Toggle pins / unpins immediately |
-| Composer “In this chat” | Shows pinned docs; X removes from scope |
-| Follow-up messages | No need to re-attach; scoped IDs are used for retrieval |
-| API | `GET/POST/PUT/DELETE /api/chats/:id/documents` |
+### Why this layout
+
+| Chips in the input | Panel above messages |
+|--------------------|----------------------|
+| Crowded; hard to show status | Room for badges and checkboxes |
+| Easy to confuse with “this one message only” | Clear “files in this chat” |
+| Awkward multi-select | Select / deselect for each answer |
+| Mixes with typing | Composer stays clean |
+
+### Panel behavior
+
+| Control | What it does |
+|---------|----------------|
+| **Collapse / expand** | Chevron (primary-colored) toggles the list for more message space; preference saved in `localStorage` (`documind:docs-panel-open`) |
+| **Collapsed summary** | Still shows file count and how many are selected |
+| **Checkbox** | Include this file in the **next** answer’s RAG set |
+| **Status badge** | Indexed / Processing… / Failed / Uploading… |
+| **Remove (X)** | Remove from **this chat only** (file stays under My documents) |
+| **Paperclip / folder** | Add files into the panel (upload or library) |
+
+### Status while OCR runs
+
+A scan may show **Processing…** for a while. You can still send a message; if a selected file is not **Indexed** yet, RAG will not invent content from it (honest “not ready” style answer). When status becomes **Indexed**, ask again with it checked.
+
+### Server model
+
+| Concept | Storage / API |
+|---------|----------------|
+| Pins (list membership) | `chat_documents` via `/api/chats/:id/documents` |
+| Selection for this answer | Client sends as `documentIds` on stream requests |
+| Actually retrieved | Subset of those IDs with status **`indexed`** |
 
 ## RAG product rules
 
 | Rule | Behavior |
 |------|----------|
-| **Indexed only** | Non-indexed pins → explicit “not ready” style answer for those files |
-| **Chat scope ∪ turn** | Pinned chat docs + any new ids on this send |
-| **Library picker** | Lists **indexed** documents (RAG-ready) |
-| **Fresh upload** | Chip = stored; pin when indexed (or on next send after ingest) |
-| **No pins and no text** | Cannot send empty; with pins only, can ask e.g. “summarize” |
-| **No pins and no attachments** | General chat (no Qdrant); any configured generation model works |
+| **Selected for send** | Only **checked** panel docs are sent as `documentIds` |
+| **Indexed only** | Among those, only `indexed` contribute Qdrant chunks |
+| **Deselected** | Still listed in the chat; ignored for that answer |
+| **Removed** | Unpinned from chat; not deleted from the library |
+| **No selection + text** | General chat (no document retrieval) |
+| **Selection only** | Can send without typing (e.g. “summarize”) |
 
 ## Sidebar
 
@@ -78,4 +101,4 @@ Documents can be **pinned to a chat** (`chat_documents` table). RAG uses the ful
 
 ## UI building blocks
 
-MessageScroller, Message, Bubble, Attachment, Marker (shadcn chat components). Live assistant bubble while tokens stream.
+MessageScroller, Message, Bubble, Badge, Checkbox, collapsible documents strip, model Select. Live assistant bubble while tokens stream.

@@ -25,7 +25,7 @@ For grounded answers: [RAG chat](/docs/guide/rag-chat).
 |------|--------------------|----------------------|
 | **Upload** | Progress / “done” chip; file on My documents | Browser puts the file in **RustFS**. Postgres stores name, owner, path. |
 | **Ingest** | Badge: `processing` → `indexed` (or `failed`) | **Docker `ingest-worker`** extracts text, embeds, upserts **Qdrant**. |
-| **Chat with docs** | Streaming answers | Retrieval + model — **indexed** docs **pinned to the chat**. |
+| **Chat with docs** | Streaming answers | Retrieval + model — **checked + indexed** docs in the chat panel. |
 
 **Ingest is not upload.** Upload finishes when bytes are in storage. Ingest finishes when the pipeline has prepared (or failed) the file for RAG.
 
@@ -47,8 +47,8 @@ You do **not** need a separate terminal for ingest. The Compose service **`inges
 | Format | Extractor | Chat/RAG when indexed |
 |--------|-----------|------------------------|
 | `.txt`, `.md`, `.csv`, `.rtf` | Node (UTF-8) | Yes |
-| **Text-based PDF** (selectable text) | Docker **`pdf-extract`** (PyMuPDF) | Yes |
-| Scanned / image-only PDF | Native extract empty | **`failed`** until OCR (F1b) |
+| **Text-based PDF** (selectable text) | Docker **`pdf-extract`** (PyMuPDF, fast) | Yes |
+| **Scanned / image PDF** | Same service → page images → **Tesseract OCR** when `PDF_OCR_MODE=auto` | Yes if OCR finds text; else **`failed`** |
 | DOCX / XLSX (binary) | Not fully extracted yet | Storage only / no vectors |
 
 ---
@@ -104,13 +104,13 @@ If Compose is **not** running:
 | **`indexed`** | Ingest succeeded (vectors if text was extractable) |
 | **`failed`** | Ingest failed (empty PDF text, embed error, …); use **Retry ingest** |
 
-### Chat chip vs My documents
+### Where status appears
 
-| Place | After attach/upload |
-|-------|---------------------|
-| **Chat attachment chip** | Upload only: uploading → done/error |
-| **My documents** | Full lifecycle + polling + retry |
-| **In this chat** | Pinned docs for RAG every turn |
+| Place | What you see |
+|-------|----------------|
+| **My documents** | Full lifecycle + polling + **Retry ingest** |
+| **Chat documents panel** | Files in this chat: status badge, select for RAG, remove from chat; **collapsible** |
+| **Composer** | Text + model + add file (no long chip list) |
 
 ---
 
@@ -143,7 +143,8 @@ sequenceDiagram
   W->>DB: claim job running
   W->>S3: download object
   alt PDF
-    W->>PDF: POST /extract
+    W->>PDF: POST /extract?ocr=auto
+    Note over PDF: PyMuPDF first; OCR if needed
     PDF-->>W: text
   else txt/md/csv
     W->>W: extract UTF-8
@@ -160,14 +161,17 @@ sequenceDiagram
 1. `docker compose up -d` + `npm run dev`  
 2. **My documents** → upload a text PDF or `.txt`  
 3. Badge: **processing** → **indexed**  
-4. **New chat** → pin file under **In this chat** / library  
-5. Ask a question → streamed answer from RAG  
+4. **New chat** → add file to the **documents panel** → leave it **checked**  
+5. When status is **Indexed**, ask → streamed answer from RAG  
 
-### Scanned PDF
+### Scanned PDF (OCR)
 
-1. Upload image-only PDF  
-2. Status **`failed`** with message about no extractable text  
-3. OCR path (F1b) will use the same `pdf-extract` service later  
+1. Upload image-only / scanned PDF  
+2. Worker uses `ocr=auto`: native text empty → **OCR** (can take minutes)  
+3. If OCR finds text → **`indexed`** and usable in chat  
+4. If still empty → **`failed`** (quality too poor / blank / encrypted)  
+
+Plain-language OCR explanation: [PDF extract & OCR](/docs/guide/pdf-extract).  
 
 ---
 
@@ -178,8 +182,9 @@ sequenceDiagram
 | **A** | Queue + worker + statuses | Done (worker in Docker) |
 | **B2+B3** | Text extract → embed → Qdrant → streaming chat | Done |
 | **F1** | Text-based PDF via PyMuPDF | Done |
-| **F1b** | OCR for scanned PDFs | Next |
-| **S** | Sources footer | After F1b / as polish |
+| **F1b** | OCR for scanned PDFs (Tesseract, free/local) | Done |
+| **DOCX** | Word extract | Later when PDF path is stable |
+| **S** | Sources footer | Product polish next |
 
 ---
 
