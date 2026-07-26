@@ -1,0 +1,92 @@
+---
+title: PDF extract (F1)
+description: How PDF text extraction works with Docker, PyMuPDF, and the ingest worker — and how OCR will plug in later without rework.
+---
+
+# PDF extract (Option F1)
+
+Documind extracts **native text** from PDFs with a small **Python service** (PyMuPDF).  
+OCR for scanned PDFs is planned as **F1b** inside the **same service** (not a rewrite).
+
+---
+
+## Why Python in Docker?
+
+| Approach | Why we chose it |
+|----------|-----------------|
+| Separate **pdf-extract** container | Keeps Next.js free of native PDF deps |
+| **PyMuPDF** | Free/OSS, fast for digital (selectable) text |
+| Stable HTTP API | OCR later = same URL, more options |
+| **ingest-worker** in Compose | No separate host worker process for daily use |
+
+---
+
+## How it runs
+
+```text
+docker compose up -d
+  ├── postgres, redis, qdrant, rustfs
+  ├── pdf-extract   (:8090)   ← Python / PyMuPDF
+  └── ingest-worker           ← Node job loop (internal Docker network)
+
+npm run dev                   ← only process you run by hand for the app
+```
+
+| Service | Host port | Role |
+|---------|-----------|------|
+| `pdf-extract` | **8090** | `POST /extract` → plain text |
+| `ingest-worker` | (none) | Claim jobs → extract → embed → Qdrant |
+
+Worker uses **internal** URLs (`http://pdf-extract:8090`, `http://rustfs:9000`, …).  
+Your `.env` for **Next.js on the host** still uses `localhost` ports.
+
+---
+
+## Pipeline for a PDF
+
+1. Browser uploads PDF → RustFS (unchanged)  
+2. Confirm enqueues ingest job  
+3. **ingest-worker** downloads bytes  
+4. `POST http://pdf-extract:8090/extract?ocr=off` with PDF body  
+5. If text OK → chunk → Gemini embed → Qdrant → **`indexed`**  
+6. If no text → **`failed`** with message (scanned PDF; OCR not enabled yet)
+
+`.txt` / `.md` / `.csv` still extract **inside Node** (no Python).
+
+---
+
+## Empty / scanned PDFs (F1)
+
+With `ocr=off`:
+
+- No selectable text → status **`failed`**  
+- Error explains scanned/image PDF and that OCR is not enabled  
+- After **F1b**, set `ocr=auto` so those files can recover without a new architecture  
+
+---
+
+## API (pdf-extract)
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/health` | Healthcheck |
+| `POST` | `/extract?ocr=off` | F1 supported |
+| `POST` | `/extract?ocr=auto\|force` | **501** until F1b |
+
+---
+
+## Env
+
+| Variable | Host (Next / rare local worker) | Inside `ingest-worker` container |
+|----------|----------------------------------|----------------------------------|
+| `PDF_EXTRACT_URL` | `http://127.0.0.1:8090` | `http://pdf-extract:8090` (compose override) |
+| `GEMINI_API_KEY` | in `.env` | from `env_file: .env` |
+
+---
+
+## Next (F1b / Sources)
+
+1. **F1b** — Tesseract / OCRmyPDF in the same image; `ocr=auto` when native text is short  
+2. **Sources footer** — show which doc/chunks the answer used  
+
+Related: [Document ingest](/docs/guide/document-ingest) · [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant)

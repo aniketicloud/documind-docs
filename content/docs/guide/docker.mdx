@@ -40,6 +40,21 @@ docker compose logs -f redis
 - App env: `QDRANT_URL=http://127.0.0.1:6335` (host maps to container `6333`)
 - Collection vector **size must match** `GEMINI_EMBED_DIMENSIONS` (default 768). If you change embed model/dims, re-ingest — see [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant)
 
+## pdf-extract
+
+- Port **8090**
+- Build context: `services/pdf-extract` (Python + PyMuPDF)
+- F1: native PDF text only (`ocr=off`); OCR later in the same service
+- See [PDF extract](/docs/guide/pdf-extract)
+
+## ingest-worker
+
+- No host port (internal only)
+- Build: `Dockerfile.worker` (Node + tsx)
+- Uses Docker DNS: `postgres`, `redis`, `rustfs`, `qdrant`, `pdf-extract`
+- Requires `GEMINI_API_KEY` in project `.env` (passed via `env_file`)
+- Daily use: leave this service running; no host worker command needed
+
 ## Health tips
 
 ```bash

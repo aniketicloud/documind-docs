@@ -8,6 +8,7 @@
     "docker",
     "document-ingest",
     "rag-chat",
-    "embeddings-and-qdrant"
+    "embeddings-and-qdrant",
+    "pdf-extract"
   ]
 }

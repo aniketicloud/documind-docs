@@ -51,7 +51,8 @@ flowchart LR
 | Path | Work allowed |
 |------|----------------|
 | Presign / confirm upload | Validate type/size, HEAD object, enqueue job |
-| `worker:ingest` | Download, parse text, embed, Qdrant upsert |
+| Compose `ingest-worker` | Download, extract (text/PDF), embed, Qdrant upsert |
+| Compose `pdf-extract` | PDF → plain text (PyMuPDF) |
 | Chat stream API | Embed query, retrieve, stream LLM, save message |
 
 ## Related

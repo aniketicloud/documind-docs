@@ -5,13 +5,15 @@ description: Day-to-day workflow for Documind.
 
 ## Recommended terminals
 
-1. **Docker** — keep compose running  
+1. **Docker** — `docker compose up -d`  
+   Starts Postgres, Redis, Qdrant, RustFS, **pdf-extract**, and **ingest-worker**  
 2. **App** — `npm run dev` in `documind`  
-3. **Ingest worker** — `npm run worker:ingest` in `documind` (needed for document `indexed` status)  
-4. **Docs** (optional) — `npm run dev` in `documind-docs` on port **3001**  
+3. **Docs** (optional) — `npm run dev` in `documind-docs` on port **3001**  
 
-Without the worker, uploads still save files, but documents may stay **`processing`**.  
-See [Document ingest](/docs/guide/document-ingest) for a plain-language explanation.
+**Do not** start a host ingest process for normal work — Compose already runs **`ingest-worker`**.  
+
+Without Compose, uploads may still save files, but documents stay **`processing`**.  
+PDF + worker: [PDF extract](/docs/guide/pdf-extract) · [Document ingest](/docs/guide/document-ingest).
 
 ## Ports cheat sheet
 
@@ -24,6 +26,7 @@ See [Document ingest](/docs/guide/document-ingest) for a plain-language explanat
 | 9000 | RustFS S3 API |
 | 9001 | RustFS console (`rustfsadmin` / `rustfsadmin`) |
 | 6335 | Qdrant HTTP |
+| 8090 | PDF extract (PyMuPDF service) |
 
 ## Typical feature loop
 
@@ -45,18 +48,18 @@ See [UI conventions](/docs/development/ui).
 
 `documind/AGENTS.md` reminds agents to read Next.js 16 docs under `node_modules/next/dist/docs/` before changing framework APIs.
 
-## Full AI path (B2+B3)
+## Full AI path
 
-1. `docker compose up -d` (includes Qdrant)  
-2. Set `GEMINI_API_KEY` in `.env`  
-3. `npm run dev` + `npm run worker:ingest`  
-4. Upload a `.txt` / `.md` → wait for **indexed** → chat with library attach  
+1. Set `GEMINI_API_KEY` in `.env`  
+2. `docker compose up -d` (Qdrant, **pdf-extract**, **ingest-worker**, …)  
+3. `npm run dev`  
+4. Upload a `.txt` or **text-based PDF** → **indexed** → pin to chat → ask  
 
-See [RAG chat](/docs/guide/rag-chat) for what we built and why.
+See [RAG chat](/docs/guide/rag-chat) and [PDF extract](/docs/guide/pdf-extract).
 
 ## Known gaps (product)
 
-- RAG text extraction is **txt/md/csv** only (PDF/DOCX parsers = option **F**)  
-- No citation chips in the UI yet  
+- Scanned PDFs need **OCR (F1b)**; DOCX/XLSX full extract still open  
+- No citation / sources footer yet  
 - Dashboard route still exists but is not the primary UX  
 - Production rate limits / secret management still thin (option **D**)  

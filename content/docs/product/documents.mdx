@@ -57,7 +57,11 @@ Max size: **50MB**. Images/audio/video/executables rejected.
 
 | Type | Ingest behavior |
 |------|-----------------|
-| `.txt`, `.md`, `.csv` | Extract → chunk → Gemini embed → Qdrant |
-| PDF / Word / Excel (binary) | Storage lifecycle may reach `indexed` without vectors until Option **F** |
+| `.txt`, `.md`, `.csv` | Node extract → chunk → Gemini embed → Qdrant |
+| **Text-based PDF** | Docker **pdf-extract** (PyMuPDF) → same embed path → RAG-ready when **`indexed`** |
+| Scanned / image PDF | Usually **`failed`** (no native text; OCR later) |
+| Word / Excel (binary) | Storage OK; full text extract not complete yet |
 
-Chat answers use Gemini over **retrieved chunks** only. Full product explanation: [RAG chat (B2+B3)](/docs/guide/rag-chat).
+Chat uses **retrieved chunks** from **chat-scoped indexed** docs. See [RAG chat](/docs/guide/rag-chat) and [PDF extract](/docs/guide/pdf-extract).
+
+Ingest requires **`docker compose up -d`** (services `ingest-worker` + `pdf-extract`).

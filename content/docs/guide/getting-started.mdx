@@ -40,14 +40,10 @@ npm install
 npm run db:push
 ```
 
-4. Start the app **and** the ingest worker (two terminals):
+4. Start the app (ingest runs in Docker already):
 
 ```bash
 npm run dev
-```
-
-```bash
-npm run worker:ingest
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000), create an account, and try **New chat**.
@@ -58,17 +54,19 @@ npm run worker:ingest
 |-------|----------|
 | App | Marketing home + login/signup |
 | After login | Redirect to `/new` |
-| Docker | Postgres `:5433`, Redis `:6379`, RustFS `:9000`/`:9001`, Qdrant `:6335` |
-| Documents | Upload a `.txt` under **My documents** → status **`indexed`** |
-| Chat | Attach that indexed file → ask a question → **streamed** answer |
+| Docker | Postgres, Redis, RustFS, Qdrant, **pdf-extract `:8090`**, **ingest-worker** |
+| Documents | Upload a `.txt` or **text PDF** → status **`indexed`** |
+| Chat | Pin that file to the chat → ask a question → **streamed** answer |
 | Redis demo | CRUD on `/redis` |
 
-## Why two Node processes?
+## Processes
 
-- **`npm run dev`** — UI and APIs (including streaming chat)  
-- **`npm run worker:ingest`** — background extract/embed into Qdrant  
+| What | How |
+|------|-----|
+| Infra + worker + PDF extract | `docker compose up -d` |
+| Next.js app | `npm run dev` |
 
-Without the worker, files never become RAG-ready. Details: [Document ingest](/docs/guide/document-ingest) · [RAG chat](/docs/guide/rag-chat).
+Details: [Document ingest](/docs/guide/document-ingest) · [PDF extract](/docs/guide/pdf-extract) · [RAG chat](/docs/guide/rag-chat).
 
 ## Next
 

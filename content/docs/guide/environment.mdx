@@ -78,6 +78,15 @@ Note: embeddings are Gemini-only (`gemini-embedding-2`). Changing embed model/di
 
 Required for ingest embeddings and chat retrieval. Start with `docker compose up -d`.
 
+## PDF extract + ingest worker
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `PDF_EXTRACT_URL` | `http://127.0.0.1:8090` | Host URL for the PyMuPDF service (compose worker overrides to `http://pdf-extract:8090`) |
+| `PDF_EXTRACT_TIMEOUT_MS` | `120000` | Optional timeout for extract HTTP call |
+
+Compose services: `pdf-extract`, `ingest-worker`. See [PDF extract](/docs/guide/pdf-extract).
+
 ## Docs site
 
 This Fumadocs project does **not** need Documind’s database, S3, Gemini, or Qdrant env vars for local viewing.

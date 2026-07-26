@@ -153,14 +153,13 @@ If you previously indexed with `text-embedding-004`, treat old vectors as **obso
 
 ### How to re-ingest (happy path)
 
-1. `docker compose up -d` (Qdrant running)  
+1. `docker compose up -d` (Qdrant + **ingest-worker** + **pdf-extract**)  
 2. App `.env` has the embed settings above  
-3. `npm run worker:ingest`  
-4. **My documents** → **Retry ingest** on each file (or re-upload)  
-5. Wait for status **`indexed`**  
-6. Chat → attach from **Indexed documents** → ask  
+3. **My documents** → **Retry ingest** on each file (or re-upload)  
+4. Wait for status **`indexed`**  
+5. Chat → pin under **In this chat** → ask  
 
-If the worker is not running, files stay `processing` and RAG has nothing useful.
+If Compose is not running, files stay `processing` and RAG has nothing useful.
 
 ---
 
@@ -200,7 +199,7 @@ Old embedding model **`text-embedding-004`** is shut down; modern path is **`gem
 
 - Switching chat model does **not** “retrain” or re-embed documents  
 - **`indexed`** after re-ingest means “vectors written with the **current** embed model” (for text files that produced chunks)  
-- PDF/Word still need better parsers (option **F**) for real text extraction  
+- Text PDFs work (F1); scanned PDFs need OCR (F1b); DOCX/XLSX full extract still open  
 
 ---
 
@@ -216,9 +215,9 @@ Checklist:
 
 1. Status **`indexed`** on My documents?  
 2. Worker running?  
-3. Text type (`.txt` / `.md` / `.csv`) with real content?  
+3. Text type (`.txt` / `.md` / `.csv`) or **text-based PDF** with real content?  
 4. Re-ingested **after** the embed model migration?  
-5. File selected in the **Indexed documents** picker for **this** send?
+5. File **pinned** to this chat (**In this chat**)?
 
 ### “Can I use 1536 dimensions?”
 

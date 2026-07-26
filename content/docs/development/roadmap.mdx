@@ -68,7 +68,7 @@ flowchart TB
 | Redis | Queue + demo | Ingest job list + `/redis` playground |
 | Qdrant | **In use** | Chunk vectors; filtered search |
 | Document ingest pipeline | **A + B2** | Jobs, worker, extract/embed for text |
-| Document parsing | **Text suite** | txt/md/csv; PDF/Office = option F |
+| Document parsing | **Text + text PDF** | txt/md/csv + PyMuPDF; OCR / DOCX open |
 | RAG / embeddings | **Done (B2)** | Gemini embed + Qdrant |
 | LLM integration | **Done (B3)** | Streaming chat APIs + UI |
 | Production hardening | Thin | Secrets, rate limits, observability |
@@ -81,7 +81,7 @@ flowchart TB
 
 ### Infra (Docker)
 
-Postgres, Redis, RustFS, Qdrant. App needs **`GEMINI_API_KEY`** and a second process: `npm run worker:ingest`.
+Postgres, Redis, RustFS, Qdrant, **pdf-extract**, **ingest-worker** via Compose. App needs **`GEMINI_API_KEY`** and `docker compose up -d`.
 
 ---
 
@@ -109,10 +109,10 @@ Browser
       → Qdrant (filtered vector search)
   → (presigned) RustFS upload/download
 
-Worker (npm run worker:ingest)
+Worker (Compose ingest-worker)
   → pop job
   → GET object from RustFS
-  → parse txt/md/csv (PDF later)
+  → parse txt/md/csv (Node) or PDF (pdf-extract / PyMuPDF)
   → chunk
   → embed (Gemini)
   → upsert Qdrant points { userId, documentId, chunkIndex, text }
@@ -141,7 +141,7 @@ Document statuses:
 
 ### Option A — Ingest foundation ✅
 
-**What:** `document_jobs`, Redis queue, `worker:ingest`, statuses, My documents badges, retry.
+**What:** `document_jobs`, Redis queue, Docker **`ingest-worker`**, statuses, My documents badges, retry.
 
 **Why:** Upload must stay fast (ADR-0007). Heavy work needs a separate process, retries, and visible lifecycle before any “smart” features.
 
@@ -194,11 +194,11 @@ Document statuses:
 | ID | Item | Why | Status |
 |----|------|-----|--------|
 | P1.1–P1.2 | Job model + worker | Foundation | **Done (A)** |
-| P1.3 | Parsers (text first; PDF next) | Unlock content | **Text done; PDF open (F)** |
+| P1.3 | Parsers (text + text PDF) | Unlock content | **F1 done; OCR/DOCX open** |
 | P1.4–P1.5 | Chunk + Qdrant + embeddings | RAG store | **Done (B2)** |
 | P1.6 | Chat RAG + LLM stream | Product value | **Done (B2+B3)** |
-| **P1.7** | **Citations UI** (doc/chunk) | Trust | Open |
-| **P1.8** | **PDF/DOCX/XLSX extract** | Real-world files | Open (**F**) |
+| **P1.7** | **Sources footer** (doc/chunk) | Trust | **Next polish** |
+| **P1.8** | **OCR + DOCX/XLSX** | Scanned + Office | Open (**F1b** / later) |
 
 ### P2 — Chat product depth
 
@@ -257,13 +257,13 @@ Would ignore document bytes. Superseded by B2/B3 for Documind’s north star.
 
 **Ship:** better empty states, dashboard removal, document search filter, mobile sidebar, profile edit, citation chips.
 
-### Option F — **PDF-capable ingest** (recommended product next)
+### Option F — **PDF-capable ingest**
 
-**Ship:** PDF (and ideally DOCX/XLSX) text extraction in the worker → same chunk/embed path.
+- **F1 (done):** text-based PDF via Docker **pdf-extract** (PyMuPDF) + Compose **ingest-worker**  
+- **F1b (next engineering):** OCR (`ocr=auto`) for scanned PDFs in the same service  
+- **Later:** DOCX/XLSX  
 
-**Depends on:** A (done). Reuses B2 vector path.
-
-**Exit criteria:** PDF upload → indexed with chunks → answers grounded in that PDF.
+**Exit criteria F1:** text PDF → `indexed` with chunks → chat Q&A — **met**.
 
 ### Option G — **Docs / ops only**
 
@@ -275,7 +275,8 @@ Publish `documind-docs` to Vercel; keep app backlog frozen.
 
 | If you want… | Choose |
 |--------------|--------|
-| Better “chat with real PDFs” | **F** |
+| Better scanned PDFs | **F1b (OCR)** |
+| Trust / “which source?” | **Sources footer** |
 | Ship current product safely | **D** |
 | Trust / polish (citations, layout) | **E** (+ P1.7) |
 | Public documentation hosting | **G** |
@@ -296,7 +297,8 @@ Historical path that got us here: **A → B2 → B3**.
 - [x] Placeholder assistant removed for RAG path  
 - [x] Failures visible and retriable  
 - [x] ADRs for model + embed provider (ADR-0008)  
-- [ ] PDF-quality extraction  
+- [x] Text PDF extraction (F1)  
+- [ ] OCR for scanned PDFs (F1b)  
 - [ ] Citation UI  
 - [ ] Production hardening checklist  
 
@@ -307,7 +309,8 @@ Historical path that got us here: **A → B2 → B3**.
 Reply with one of:
 
 - ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ — **done**  
-- `Do F` — PDF (and related) ingest  
+- `Do F1b` — OCR for scanned PDFs  
+- `Do sources` — sources footer  
 - `Do D` — production hardening  
 - `Do E` — UX polish  
 - `Do G` — deploy docs to Vercel  

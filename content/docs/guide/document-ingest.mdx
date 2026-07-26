@@ -1,91 +1,77 @@
 ---
 title: Document ingest
-description: What ingest means, what the worker does, why it is separate from upload, and how it feeds RAG.
+description: What ingest means, how the Docker worker runs, PDF text extract, and how files become searchable for chat.
 ---
 
 # Document ingest explained
 
-This page explains **what ingest is**, **why it exists**, and how it connects to chat. Upload chips only show “stored”; **My documents** shows `processing` → `indexed`.
+This page explains **what ingest is**, **why it exists**, and how it connects to chat.
 
-For grounded answers (Gemini + Qdrant + streaming), see **[RAG chat (B2 + B3)](/docs/guide/rag-chat)**.
+For PDF details: [PDF extract (F1)](/docs/guide/pdf-extract).  
+For embeddings / Qdrant: [Embeddings & Qdrant](/docs/guide/embeddings-and-qdrant).  
+For grounded answers: [RAG chat](/docs/guide/rag-chat).
 
 ---
 
 ## The simple picture
 
 ```text
-1. UPLOAD     →  “Save the file somewhere safe”
-2. INGEST     →  “Prepare that file for search / AI”
-3. CHAT / AI  →  “Answer questions using prepared content”
+1. UPLOAD     →  Save the file in RustFS (fast, browser → S3)
+2. INGEST     →  Prepare that file for search / AI
+3. CHAT / AI  →  Answer questions using prepared content
 ```
 
 | Step | What the user sees | What the system does |
 |------|--------------------|----------------------|
-| **Upload** | Progress / “done” chip in chat; file on My documents | Browser puts the file in **RustFS**. Postgres stores name, owner, path. |
-| **Ingest** | Badge: `processing` → `indexed` (My documents) | **Background worker** downloads the object, extracts text when possible, embeds, upserts **Qdrant**, updates status. |
-| **Chat with docs** | Streaming answers | Retrieval + Gemini — only for **indexed** docs **attached on that turn**. |
+| **Upload** | Progress / “done” chip; file on My documents | Browser puts the file in **RustFS**. Postgres stores name, owner, path. |
+| **Ingest** | Badge: `processing` → `indexed` (or `failed`) | **Docker `ingest-worker`** extracts text, embeds, upserts **Qdrant**. |
+| **Chat with docs** | Streaming answers | Retrieval + model — **indexed** docs **pinned to the chat**. |
 
 **Ingest is not upload.** Upload finishes when bytes are in storage. Ingest finishes when the pipeline has prepared (or failed) the file for RAG.
 
 ---
 
-## What we built (history)
+## How to run (daily)
 
-### Option A — foundation
+```bash
+docker compose up -d   # postgres, redis, qdrant, rustfs, pdf-extract, ingest-worker
+npm run dev            # Next.js app only
+```
 
-We first shipped a **reliable async pipeline** without full AI:
-
-- Job rows (`document_jobs`) + Redis list queue  
-- Separate process `npm run worker:ingest`  
-- Statuses: `processing` | `indexed` | `failed`  
-- My documents badges + **Retry ingest**  
-
-**Why A first:** prove enqueue → claim → succeed/fail/retry without blocking the browser. That is the spine everything else hangs on.
-
-### Option B2 — intelligence inside the same worker
-
-The **same worker** now does real prep for text files:
-
-1. Download object from RustFS  
-2. Extract plain text (`.txt` / `.md` / `.csv`)  
-3. Chunk with overlap  
-4. Embed with **Gemini**  
-5. Upsert **Qdrant** points (with `userId` + `documentId`)  
-6. Mark **`indexed`** or **`failed`**
-
-**Why inside the worker (not on upload):** large files and embedding rate limits can take seconds–minutes. ADR-0007: keep upload fast.
-
-**Why not PDF yet:** binary parsers are a separate investment (Option **F**). Text files prove upload → vectors → answers end-to-end.
+You do **not** need a separate terminal for ingest. The Compose service **`ingest-worker`** claims jobs automatically.
 
 ---
 
-## Why not do ingest during upload?
+## What gets text for RAG
 
-When you attach or upload, the browser:
+| Format | Extractor | Chat/RAG when indexed |
+|--------|-----------|------------------------|
+| `.txt`, `.md`, `.csv`, `.rtf` | Node (UTF-8) | Yes |
+| **Text-based PDF** (selectable text) | Docker **`pdf-extract`** (PyMuPDF) | Yes |
+| Scanned / image-only PDF | Native extract empty | **`failed`** until OCR (F1b) |
+| DOCX / XLSX (binary) | Not fully extracted yet | Storage only / no vectors |
 
-1. Asks the app for a **presigned URL**  
-2. **Uploads directly to RustFS**  
-3. Calls **confirm** so the app marks storage OK and **enqueues** a job  
+---
 
-That path must stay **fast and reliable**. If we embedded or parsed PDF inside confirm:
+## Why not parse during upload?
 
-- The browser would hang  
-- Timeouts would rise  
-- Next.js would burn CPU on request threads  
+Upload must stay **fast**: presign → browser PUT → confirm → **enqueue job**.  
+Heavy work (PDF, embeddings) runs in the **background worker**.
 
 ```text
-Upload request  →  only “file is in storage” (+ enqueue job)
-Worker process  →  “extract / embed / index for AI”
+Upload request  →  “file is in storage” + enqueue job
+ingest-worker   →  extract → embed → Qdrant → indexed | failed
 ```
 
 ---
 
-## What `npm run worker:ingest` does
+## What the Docker ingest worker does
 
-| Process | Command | Role |
-|---------|---------|------|
+| Process | How it runs | Role |
+|---------|-------------|------|
 | **Web app** | `npm run dev` | UI, auth, APIs, create jobs on confirm |
-| **Ingest worker** | `npm run worker:ingest` | Claims jobs; extract → embed → Qdrant |
+| **ingest-worker** | Compose service | Claims jobs; extract → embed → Qdrant |
+| **pdf-extract** | Compose service `:8090` | PDF → plain text (PyMuPDF) |
 
 ### Worker loop
 
@@ -94,18 +80,17 @@ forever:
   1. Claim next job (Redis pop, or Postgres queued/stale)
   2. Load document (owner, S3 key)
   3. Download bytes from RustFS
-  4. Extract text if type supported
+  4. Extract text (Node for text files; HTTP to pdf-extract for PDF)
   5. If text: chunk → embed → upsert Qdrant
-  6. Mark document indexed OR failed (retry until max attempts)
+  6. Mark document indexed OR failed
   7. Loop
 ```
 
-If you **never** start the worker:
+If Compose is **not** running:
 
-- Uploads still succeed  
-- Documents may sit at **`processing`**  
+- Uploads may still succeed  
+- Documents may stay **`processing`**  
 - Chat library shows **no indexed files**  
-- RAG cannot use those files  
 
 ---
 
@@ -117,7 +102,7 @@ If you **never** start the worker:
 | **`ready`** | File confirmed in RustFS (usually brief) |
 | **`processing`** | Ingest job queued or running |
 | **`indexed`** | Ingest succeeded (vectors if text was extractable) |
-| **`failed`** | Ingest failed; use **Retry ingest** |
+| **`failed`** | Ingest failed (empty PDF text, embed error, …); use **Retry ingest** |
 
 ### Chat chip vs My documents
 
@@ -125,14 +110,7 @@ If you **never** start the worker:
 |-------|---------------------|
 | **Chat attachment chip** | Upload only: uploading → done/error |
 | **My documents** | Full lifecycle + polling + retry |
-
-That split is intentional: chat stays snappy; My documents is the pipeline dashboard.
-
-### What “indexed” means for chat
-
-- **txt/md/csv with content** → searchable in Qdrant → good RAG candidates  
-- **PDF/Word without parsers yet** → may be `indexed` for storage, but **no chunks** → answers cannot quote the file  
-- Prefer text files until Option **F**
+| **In this chat** | Pinned docs for RAG every turn |
 
 ---
 
@@ -145,7 +123,8 @@ sequenceDiagram
   participant S3 as RustFS
   participant DB as Postgres
   participant R as Redis queue
-  participant W as worker:ingest
+  participant W as ingest-worker
+  participant PDF as pdf-extract
   participant Q as Qdrant
   participant G as Gemini
 
@@ -159,11 +138,16 @@ sequenceDiagram
   App->>R: push job
   App->>U: OK (upload finished)
 
-  Note over W: Separate terminal
+  Note over W: Docker Compose
   W->>R: pop job
   W->>DB: claim job running
   W->>S3: download object
-  W->>W: extract + chunk
+  alt PDF
+    W->>PDF: POST /extract
+    PDF-->>W: text
+  else txt/md/csv
+    W->>W: extract UTF-8
+  end
   W->>G: embed chunks
   W->>Q: upsert vectors
   W->>DB: status=indexed or failed
@@ -171,43 +155,19 @@ sequenceDiagram
 
 ---
 
-## Why this design matters
+## Happy path (text PDF or .txt)
 
-1. **Foundation for RAG** — chat only works well when ingest filled Qdrant.  
-2. **Retries** — reprocess without re-uploading.  
-3. **Honest UX** — processing vs indexed vs failed.  
-4. **Healthy web app** — heavy work off the request path.  
-5. **Reuse of infra** — Redis + Postgres jobs + RustFS + Qdrant + Gemini.
+1. `docker compose up -d` + `npm run dev`  
+2. **My documents** → upload a text PDF or `.txt`  
+3. Badge: **processing** → **indexed**  
+4. **New chat** → pin file under **In this chat** / library  
+5. Ask a question → streamed answer from RAG  
 
-Skipping the worker and calling an LLM on raw S3 keys would either ignore files, block uploads, or create unmaintainable one-offs.
+### Scanned PDF
 
----
-
-## How to run and test
-
-```bash
-# 1) Infrastructure (includes Qdrant on 6335)
-docker compose up -d
-
-# 2) App (.env: GEMINI_API_KEY, QDRANT_URL, …)
-npm run dev
-
-# 3) Worker (required for indexed + embeddings)
-npm run worker:ingest
-```
-
-### Happy path
-
-1. **My documents** → upload a small `.txt` / `.md`  
-2. Badge: **processing** → **indexed**  
-3. Worker logs: claim + chunk count / success  
-4. **New chat** → pick file under **Indexed documents** → ask a question → streamed answer  
-
-### Without the worker
-
-1. Stop `worker:ingest`  
-2. Upload → may stick on **processing**  
-3. Start worker or **Retry ingest** → **indexed**  
+1. Upload image-only PDF  
+2. Status **`failed`** with message about no extractable text  
+3. OCR path (F1b) will use the same `pdf-extract` service later  
 
 ---
 
@@ -215,21 +175,18 @@ npm run worker:ingest
 
 | Stage | Goal | Status |
 |-------|------|--------|
-| **A** | Queue + worker + statuses | Done |
+| **A** | Queue + worker + statuses | Done (worker in Docker) |
 | **B2+B3** | Text extract → embed → Qdrant → streaming chat | Done |
-| **F** | PDF/DOCX (etc.) parsers | Next product option |
-| **D** | Production hardening | Open |
+| **F1** | Text-based PDF via PyMuPDF | Done |
+| **F1b** | OCR for scanned PDFs | Next |
+| **S** | Sources footer | After F1b / as polish |
 
 ---
 
 ## Related pages
 
-- [Embeddings, Qdrant & Gemini stack](/docs/guide/embeddings-and-qdrant) — **what embeddings are**, when to re-ingest  
-- [RAG chat (B2+B3) — what & why](/docs/guide/rag-chat)  
-- [Documents (product)](/docs/product/documents)  
-- [Local development](/docs/guide/local-development)  
+- [PDF extract (F1)](/docs/guide/pdf-extract)  
+- [Embeddings, Qdrant & Gemini stack](/docs/guide/embeddings-and-qdrant)  
+- [RAG chat](/docs/guide/rag-chat)  
 - [Docker services](/docs/guide/docker)  
-- [Roadmap](/docs/development/roadmap)  
-- [ADR-0007: No parse on upload](/docs/adr/0007-no-parse-on-upload)  
-- [ADR-0008: Gemini streaming RAG](/docs/adr/0008-gemini-streaming-rag)  
-- [ADR-0009: Interactions + embedding-2](/docs/adr/0009-gemini-interactions-embedding-2)  
+- [Local development](/docs/guide/local-development)  
