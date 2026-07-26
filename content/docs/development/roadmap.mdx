@@ -36,8 +36,7 @@ flowchart TB
   end
 
   subgraph next [Next critical path]
-    PDF[PDF/DOCX parsers F]
-    Cite[Citations UI]
+    DOCX[DOCX / XLSX parsers]
     Prod[Hardening D]
   end
 
@@ -47,9 +46,8 @@ flowchart TB
   Ingest --> Chunk --> Qdrant
   ChatUI --> LLM
   Qdrant --> LLM
-  Ingest --> PDF
-  LLM --> Cite
   LLM --> Prod
+  Ingest --> DOCX
 ```
 
 ---
@@ -61,7 +59,7 @@ flowchart TB
 | Marketing + theme | Done | Landing, dark/light |
 | Auth (email/password) | Done | Better Auth + Postgres |
 | Multi-chat | Done | `/new`, `/c/[id]`, rename, delete |
-| Chat messages | **Done (B2/B3)** | Stream Gemini RAG; persist after stream |
+| Chat messages | **Done (B2/B3 + sources)** | Stream RAG; persist answer + citation JSONB |
 | Document upload | Done | Chat + My documents; allow-list |
 | Document ownership | Done | Owner-only APIs |
 | RustFS (S3) | Done | Presign PUT/GET/DELETE |
@@ -76,7 +74,7 @@ flowchart TB
 
 ### Data already modeled
 
-- Auth tables, `documents`, `chats`, `chat_messages`, `chat_message_documents`, `document_jobs`
+- Auth tables, `documents`, `chats`, `chat_messages` (incl. `sources` JSONB), `chat_documents`, `chat_message_documents`, `document_jobs`
 - Document statuses: `pending` | `ready` | `processing` | `indexed` | `failed`
 
 ### Infra (Docker)
@@ -197,8 +195,8 @@ Document statuses:
 | P1.3 | Parsers (text + PDF + OCR) | Unlock content | **F1 + F1b done** |
 | P1.4–P1.5 | Chunk + Qdrant + embeddings | RAG store | **Done (B2)** |
 | P1.6 | Chat RAG + LLM stream | Product value | **Done (B2+B3)** |
-| **P1.7** | **Sources footer** (doc/chunk) | Trust | **Next polish** |
-| **P1.8** | **DOCX / XLSX** | Office files | Later when PDF stable |
+| **P1.7** | **Sources footer** (doc/chunk) | Trust | **Done** |
+| **P1.8** | **DOCX / XLSX** | Office files | **Next** when PDF stable |
 
 ### P2 — Chat product depth
 
@@ -276,9 +274,9 @@ Publish `documind-docs` to Vercel; keep app backlog frozen.
 | If you want… | Choose |
 |--------------|--------|
 | Better scanned PDFs | **F1b (OCR)** |
-| Trust / “which source?” | **Sources footer** |
+| Trust / “which source?” | **Sources footer (done)** |
 | Ship current product safely | **D** |
-| Trust / polish (citations, layout) | **E** (+ P1.7) |
+| Trust / polish (layout, stop/regen) | **E** |
 | Public documentation hosting | **G** |
 
 **Architect recommendation now:**  
@@ -299,7 +297,7 @@ Historical path that got us here: **A → B2 → B3**.
 - [x] ADRs for model + embed provider (ADR-0008)  
 - [x] Text PDF extraction (F1)  
 - [x] OCR for scanned PDFs (F1b)  
-- [ ] Citation UI  
+- [x] Citation UI (sources footer)  
 - [ ] Production hardening checklist  
 
 ---
@@ -308,8 +306,7 @@ Historical path that got us here: **A → B2 → B3**.
 
 Reply with one of:
 
-- ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ — **done**  
-- `Do sources` — sources footer  
+- ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ / ~~`Do sources`~~ — **done**  
 - `Do DOCX` — Word extract (later)  
 - `Do D` — production hardening  
 - `Do E` — UX polish  

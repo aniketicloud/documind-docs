@@ -60,6 +60,28 @@ When Compose **`ingest-worker`** claims a job it:
 | **Upload ≠ AI** | Upload can finish while status is still Processing… |
 | **Streaming** | Live tokens in the UI |
 | **Multi-model** | Z.AI GLM + Gemini Interactions; default often GLM |
+| **Sources footer** | Trust: show which doc chunks grounded each answer |
+
+### Sources footer (citations)
+
+When RAG retrieves chunks for a turn, Documind stores them on the **assistant** message and shows a **Sources** row under the reply:
+
+| Field | Meaning |
+|-------|---------|
+| Document name | File that contributed the chunk |
+| `§N` | Chunk index within that file |
+| Score | Similarity from Qdrant (shown as % when 0–1) |
+| Hover / title | Short snippet of the retrieved text |
+
+**How it works**
+
+1. `retrieveContext` finds up to 6 chunks in Qdrant  
+2. `chunksToSources` builds a compact citation list (no full chunk dump)  
+3. Stream still sends **plain text tokens** (unchanged client stream protocol)  
+4. `saveAssistantMessage` persists `sources` as JSONB on `chat_messages`  
+5. UI reloads messages (or handoff after `/new`) and renders the footer  
+
+General chat (no docs selected) and “not indexed yet” answers have **no** sources row.
 
 ---
 
@@ -98,8 +120,10 @@ npm run dev
 | `lib/pdf-extract-client.ts` | HTTP client for pdf-extract service |
 | `lib/gemini.ts` | Embeddings + Interactions stream |
 | `lib/qdrant.ts` | Collection, upsert, search |
-| `lib/rag.ts` | Retrieve + stream grounded answer |
-| `lib/ingest.ts` | Job processing |
+| `lib/rag.ts` | Retrieve + stream grounded answer + `chunksToSources` |
+| `lib/chats.ts` | `saveAssistantMessage({ sources })`, load on `getChatMessages` |
+| `chat_messages.sources` | JSONB citation array on assistant rows |
+| `components/chat-workspace.tsx` | Sources footer under assistant bubbles |
 | Compose `ingest-worker` | Long-running claim loop |
 | Compose `pdf-extract` | PDF → text |
 
@@ -110,7 +134,7 @@ npm run dev
 | Item | Notes |
 |------|--------|
 | DOCX / XLSX full extract | Later (after PDF path stable) |
-| Sources footer | Show which chunks were used |
+| Click source → open chunk / document | Optional polish |
 | Stop / regenerate | Chat controls |
 
 ---

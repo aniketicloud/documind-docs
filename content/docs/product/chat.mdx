@@ -18,7 +18,8 @@ Documind’s value is **answers grounded in your files**. Placeholders would tra
 1. Persist the **user** message first  
 2. Retrieve chunks only from **selected, indexed** docs for this send  
 3. Stream model tokens into the UI  
-4. Persist the full **assistant** message when the stream ends  
+4. Persist the full **assistant** message **plus sources** (retrieved chunks) when the stream ends  
+5. Show a **Sources** footer under the assistant bubble (doc name, chunk index, score)
 
 Deep dive: [RAG chat](/docs/guide/rag-chat) · [ADR-0008](/docs/adr/0008-gemini-streaming-rag).
 
@@ -91,6 +92,18 @@ A scan may show **Processing…** for a while. You can still send a message; if 
 | **Removed** | Unpinned from chat; not deleted from the library |
 | **No selection + text** | General chat (no document retrieval) |
 | **Selection only** | Can send without typing (e.g. “summarize”) |
+| **Sources footer** | After a grounded answer, chips list each retrieved chunk (hover for snippet) |
+
+## Sources footer
+
+| What you see | Meaning |
+|--------------|---------|
+| **Sources** label | This reply used document retrieval |
+| File name + `§N` | Which file and chunk index |
+| Score | How similar the chunk was to your question |
+| Hover | Short text preview of that chunk |
+
+Stored on `chat_messages.sources` (JSONB). Reload a chat later and the same citations remain.
 
 ## Sidebar
 
@@ -101,4 +114,4 @@ A scan may show **Processing…** for a while. You can still send a message; if 
 
 ## UI building blocks
 
-MessageScroller, Message, Bubble, Badge, Checkbox, collapsible documents strip, model Select. Live assistant bubble while tokens stream.
+MessageScroller, Message, Bubble, Badge, Checkbox, collapsible documents strip, model Select, **Sources** chips under assistant messages. Live assistant bubble while tokens stream.

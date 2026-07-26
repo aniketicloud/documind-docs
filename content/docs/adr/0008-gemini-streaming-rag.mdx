@@ -75,15 +75,19 @@ PDF/DOCX parsers deferred to Option **F**. Unsupported types may still reach sto
 ### Negative / trade-offs
 
 - Free-tier rate limits and sequential embeds slow large files  
-- PDF/Word content still not searchable  
-- Plain-text streams lack structured citation events  
+- Word/XLSX content still not fully searchable (PDF + OCR done)  
+- Stream body stays plain text; citations are persisted on the message and loaded with chat (not framed as stream events)  
 - Gemini API key must be rotated if ever pasted into chat or logs  
 
 ### Follow-ups
 
-- Option **F** — richer parsers + page metadata  
-- Citations UI (P1.7)  
+- DOCX / XLSX parsers  
+- Optional click-through from source chip → document  
 - Option **D** — rate limits, secret management, deploy  
+
+### Status update
+
+**P1.7 Sources footer shipped:** retrieved chunks stored on `chat_messages.sources` and rendered under assistant replies.
 
 ## Related
 
