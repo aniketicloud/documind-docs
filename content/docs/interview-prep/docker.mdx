@@ -1,0 +1,115 @@
+---
+title: Docker
+description: Docker interview questions with simple spoken answers and short examples.
+---
+
+## 1. Benefits of Docker
+
+**Q: What are the benefits of Docker?**
+
+**Answer:**  
+Docker makes sure the application runs the same on every machine.  
+It is lightweight compared to virtual machines.  
+It helps in faster development and easy deployment.  
+It also makes scaling easier.
+
+**Example:**  
+You can run the same Node.js app on your laptop and on the server without any environment issues.
+
+---
+
+## 2. Container
+
+**Q: What is a Container?**
+
+**Answer:**  
+A container is a running instance of a Docker image.  
+It contains the application and everything it needs to run.  
+Containers are isolated from each other.
+
+**Example:**
+```bash
+docker run node:18
+```
+
+---
+
+## 3. Docker Image
+
+**Q: What is a Docker Image?**
+
+**Answer:**  
+A Docker image is a template.  
+It contains the application code and all its dependencies.  
+We create containers from images.
+
+**Example:**
+```bash
+docker build -t my-app .
+```
+
+---
+
+## 4. Docker Hub
+
+**Q: What is Docker Hub?**
+
+**Answer:**  
+Docker Hub is a public registry for Docker images.  
+We can push our own images there.  
+We can also download official images like node, nginx, mysql etc.
+
+**Example:**
+```bash
+docker pull node:18
+```
+
+---
+
+## 5. Lifecycle
+
+**Q: What is the Docker container lifecycle?**
+
+**Answer:**  
+A container goes through different states.  
+It starts from created, then running, then paused or stopped, and finally removed.  
+We control these states using Docker commands.
+
+**Example:**
+```bash
+docker start container_id
+docker stop container_id
+docker rm container_id
+```
+
+---
+
+## 6. Background run container
+
+**Q: How do you run a container in the background?**
+
+**Answer:**  
+We use the `-d` flag to run a container in detached mode.  
+This means the container runs in the background.  
+We can still check logs later.
+
+**Example:**
+```bash
+docker run -d -p 3000:3000 my-app
+```
+
+---
+
+## 7. Docker Swarm
+
+**Q: What is Docker Swarm?**
+
+**Answer:**  
+Docker Swarm is a tool for managing multiple Docker containers.  
+It helps in clustering and orchestration.  
+It allows us to run containers across multiple machines.
+
+**Example:**
+```bash
+docker swarm init
+```

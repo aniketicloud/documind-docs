@@ -1,0 +1,131 @@
+---
+title: Node.js Advanced
+description: Advanced Node.js interview questions covering middleware, CORS, authentication and more.
+---
+
+## 1. Middlewares
+
+**Q: What are middlewares in Node.js?**
+
+**Answer:**  
+Middleware is a function that runs between the request and the response.  
+It can modify the request or response object.  
+It is very commonly used in Express.js.
+
+**Example:**
+```js
+app.use((req, res, next) => {
+  console.log("Middleware running");
+  next();
+});
+```
+
+---
+
+## 2. Different types of HTTP requests
+
+**Q: What are the different types of HTTP requests?**
+
+**Answer:**  
+The main HTTP methods are GET, POST, PUT, PATCH and DELETE.  
+GET is used to fetch data.  
+POST is used to send new data.  
+PUT and PATCH are used to update data.  
+DELETE is used to remove data.
+
+**Example:**
+```js
+app.get("/users", (req, res) => {});
+app.post("/users", (req, res) => {});
+app.put("/users/:id", (req, res) => {});
+app.delete("/users/:id", (req, res) => {});
+```
+
+---
+
+## 3. Enable CORS
+
+**Q: How do you enable CORS in Node.js?**
+
+**Answer:**  
+CORS allows a server to accept requests from different domains.  
+In Express, the easiest way is to use the `cors` package.  
+We can also set the headers manually.
+
+**Example:**
+```js
+const cors = require("cors");
+app.use(cors());
+```
+
+---
+
+## 4. Authentication
+
+**Q: What is Authentication in Node.js?**
+
+**Answer:**  
+Authentication means verifying who the user is.  
+Common ways are JWT (JSON Web Token) and sessions.  
+We check the token on every protected route.
+
+**Example:**
+```js
+// Simple JWT check idea
+if (!req.headers.authorization) {
+  return res.status(401).send("Unauthorized");
+}
+```
+
+---
+
+## 5. Logging
+
+**Q: What is Logging in Node.js?**
+
+**Answer:**  
+Logging means recording important events and errors in the application.  
+It helps us debug problems later.  
+We can use packages like winston or morgan.
+
+**Example:**
+```js
+const morgan = require("morgan");
+app.use(morgan("dev"));
+```
+
+---
+
+## 6. Unit Testing
+
+**Q: What is Unit Testing in Node.js?**
+
+**Answer:**  
+Unit testing means testing small pieces of code separately.  
+We check if a function works correctly.  
+Popular tools are Jest and Mocha.
+
+**Example:**
+```js
+test("adds two numbers", () => {
+  expect(2 + 3).toBe(5);
+});
+```
+
+---
+
+## 7. BLOB
+
+**Q: What is BLOB?**
+
+**Answer:**  
+BLOB means Binary Large Object.  
+It is used to store binary data like images, videos or PDF files.  
+In Node.js we mostly use Buffer.  
+Blob is also available in newer versions of Node.
+
+**Example:**
+```js
+const blob = new Blob(["Hello World"], { type: "text/plain" });
+console.log(blob.size); // 11
+```

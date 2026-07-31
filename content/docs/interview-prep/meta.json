@@ -1,0 +1,12 @@
+{
+  "title": "Interview Prep",
+  "pages": [
+    "javascript-basics",
+    "javascript-intermediate",
+    "nodejs-core",
+    "nodejs-advanced",
+    "docker",
+    "react-basics",
+    "react-advanced"
+  ]
+}

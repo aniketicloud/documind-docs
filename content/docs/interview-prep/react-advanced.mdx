@@ -1,0 +1,166 @@
+---
+title: React.js Advanced
+description: Advanced React.js interview questions covering Hooks, Context, Redux and more.
+---
+
+## 1. Lazy Loading
+
+**Q: What is Lazy Loading in React?**
+
+**Answer:**  
+Lazy Loading means loading a component only when it is needed.  
+It helps improve the initial loading speed of the application.  
+We use React.lazy and Suspense for this.
+
+**Example:**
+```js
+const Home = React.lazy(() => import("./Home"));
+```
+
+---
+
+## 2. Context API
+
+**Q: What is Context API?**
+
+**Answer:**  
+Context API is used to share data across many components.  
+It helps us avoid prop drilling.  
+We create a context and provide the value at the top level.
+
+**Example:**
+```js
+const ThemeContext = React.createContext();
+```
+
+---
+
+## 3. Hooks
+
+**Q: What are Hooks in React?**
+
+**Answer:**  
+Hooks allow us to use state and other React features in functional components.  
+The most common hooks are useState and useEffect.  
+Hooks make functional components very powerful.
+
+**Example:**
+```js
+const [count, setCount] = useState(0);
+```
+
+---
+
+## 4. HOC (Higher Order Component)
+
+**Q: What is a Higher Order Component?**
+
+**Answer:**  
+A Higher Order Component is a function that takes a component and returns a new component.  
+It is used to share common logic between components.
+
+**Example:**
+```js
+function withAuth(Component) {
+  return function (props) {
+    return <Component {...props} />;
+  };
+}
+```
+
+---
+
+## 5. props.children
+
+**Q: What is props.children?**
+
+**Answer:**  
+props.children allows a component to receive and display whatever is passed between its opening and closing tags.  
+It is very useful for wrapper components.
+
+**Example:**
+```js
+function Card({ children }) {
+  return <div className="card">{children}</div>;
+}
+```
+
+---
+
+## 6. Redux
+
+**Q: What is Redux?**
+
+**Answer:**  
+Redux is a state management library.  
+It stores the entire application state in one central place called the store.  
+We use actions and reducers to update the state.
+
+**Example:**
+```js
+const store = createStore(reducer);
+```
+
+---
+
+## 7. Redux Thunk
+
+**Q: What is Redux Thunk?**
+
+**Answer:**  
+Redux Thunk is a middleware.  
+It allows us to write asynchronous logic inside Redux.  
+We commonly use it for API calls.
+
+**Example:**
+```js
+const fetchData = () => {
+  return async (dispatch) => {
+    const data = await api.getData();
+    dispatch({ type: "SET_DATA", payload: data });
+  };
+};
+```
+
+---
+
+## 8. Redux Saga
+
+**Q: What is Redux Saga?**
+
+**Answer:**  
+Redux Saga is another middleware for handling side effects.  
+It uses generator functions.  
+It is more powerful than Thunk for complex asynchronous flows.
+
+**Example:**  
+We write sagas using `function*` and `yield`.
+
+---
+
+## 9. Redux Form
+
+**Q: What is Redux Form?**
+
+**Answer:**  
+Redux Form was a library used to manage form state in Redux.  
+Nowadays most people use React Hook Form or Formik instead.  
+It kept form data inside the Redux store.
+
+---
+
+## 10. Unit Testing in React
+
+**Q: How do you do unit testing in React?**
+
+**Answer:**  
+We test React components using tools like Jest and React Testing Library.  
+We check if the component renders correctly and if user interactions work.
+
+**Example:**
+```js
+test("renders heading", () => {
+  render(<App />);
+  expect(screen.getByText("Hello")).toBeInTheDocument();
+});
+```

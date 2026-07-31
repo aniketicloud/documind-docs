@@ -1,0 +1,141 @@
+---
+title: React.js Basics
+description: Basic React.js interview questions with simple spoken answers and short examples.
+---
+
+## 1. How React works
+
+**Q: How does React work?**
+
+**Answer:**  
+React creates a Virtual DOM.  
+When data changes, React compares the new Virtual DOM with the old one.  
+It updates only the changed parts in the real DOM.  
+This makes React fast.
+
+**Example:**  
+When you update a state, React re-renders only the necessary components.
+
+---
+
+## 2. State & Props
+
+**Q: What is the difference between State and Props?**
+
+**Answer:**  
+Props are used to pass data from parent component to child component.  
+State is used to store data that can change inside a component.  
+Props are read-only.  
+State can be updated using setState or useState.
+
+**Example:**
+```js
+function Child({ name }) {
+  return <h1>{name}</h1>;
+}
+```
+
+---
+
+## 3. Virtual DOM
+
+**Q: What is Virtual DOM?**
+
+**Answer:**  
+Virtual DOM is a lightweight copy of the real DOM.  
+React uses it to find out what has changed.  
+Then it updates only those changed parts in the real DOM.  
+This improves performance.
+
+**Example:**  
+Instead of updating the whole page, React updates only one button text.
+
+---
+
+## 4. Props validation
+
+**Q: What is Props validation?**
+
+**Answer:**  
+Props validation means checking the type of props that a component receives.  
+It helps us catch errors early during development.  
+We use PropTypes for this.
+
+**Example:**
+```js
+import PropTypes from "prop-types";
+
+Child.propTypes = {
+  name: PropTypes.string
+};
+```
+
+---
+
+## 5. Lifecycle methods
+
+**Q: What are Lifecycle methods?**
+
+**Answer:**  
+Lifecycle methods are special functions that run at different stages of a component.  
+They run when a component is created, updated or removed.  
+In functional components we use useEffect instead.
+
+**Example:**
+```js
+useEffect(() => {
+  console.log("Component mounted");
+}, []);
+```
+
+---
+
+## 6. Routing
+
+**Q: What is Routing in React?**
+
+**Answer:**  
+Routing is used to show different pages in a single page application.  
+We use React Router for this.  
+It changes the view without refreshing the page.
+
+**Example:**
+```js
+<Route path="/about" element={<About />} />
+```
+
+---
+
+## 7. Fragment
+
+**Q: What is a Fragment?**
+
+**Answer:**  
+Fragment is used to group multiple elements without adding an extra node to the DOM.  
+We can use `<> </>` or `React.Fragment`.
+
+**Example:**
+```js
+return (
+  <>
+    <h1>Title</h1>
+    <p>Description</p>
+  </>
+);
+```
+
+---
+
+## 8. Create React App
+
+**Q: What is Create React App?**
+
+**Answer:**  
+Create React App is a tool to quickly set up a new React project.  
+It gives us a ready environment with everything configured.  
+Nowadays many people also use Vite.
+
+**Example:**
+```bash
+npx create-react-app my-app
+```

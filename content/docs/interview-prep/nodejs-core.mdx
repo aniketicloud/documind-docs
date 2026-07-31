@@ -1,0 +1,203 @@
+---
+title: Node.js Core
+description: Core Node.js interview questions with simple spoken answers and short examples.
+---
+
+## 1. What is Node.js
+
+**Q: What is Node.js?**
+
+**Answer:**  
+Node.js is a runtime that allows us to run JavaScript on the server.  
+It is built on Chrome’s V8 engine.  
+It is mainly used for building backend applications and APIs.
+
+**Example:**
+```js
+// Run this file with: node app.js
+console.log("Hello from Node.js");
+```
+
+---
+
+## 2. Event Loop
+
+**Q: What is the Event Loop?**
+
+**Answer:**  
+The Event Loop is the heart of Node.js.  
+It handles all asynchronous operations.  
+It allows Node.js to perform non-blocking operations even though JavaScript is single-threaded.
+
+**Example:**
+```js
+console.log("Start");
+
+setTimeout(() => {
+  console.log("Timeout");
+}, 0);
+
+console.log("End");
+// Output: Start → End → Timeout
+```
+
+---
+
+## 3. Modules
+
+**Q: What are modules in Node.js?**
+
+**Answer:**  
+Modules are separate files that contain reusable code.  
+We use modules to keep our code organized.  
+We can export code from one file and import it in another file.
+
+**Example:**
+```js
+// math.js
+function add(a, b) {
+  return a + b;
+}
+module.exports = add;
+
+// app.js
+const add = require("./math");
+console.log(add(2, 3)); // 5
+```
+
+---
+
+## 4. Global object
+
+**Q: What is the global object in Node.js?**
+
+**Answer:**  
+The global object is available everywhere in a Node.js application.  
+Some common global objects are `console`, `process`, `Buffer` and `setTimeout`.  
+We do not need to import them.
+
+**Example:**
+```js
+console.log(global);
+console.log(process.version);
+```
+
+---
+
+## 5. Callback Hell
+
+**Q: What is Callback Hell?**
+
+**Answer:**  
+Callback Hell happens when we write many nested callbacks.  
+The code becomes difficult to read and maintain.  
+We solve this problem by using Promises or async/await.
+
+**Example:**
+```js
+// Bad (Callback Hell)
+getData(function (a) {
+  getMoreData(a, function (b) {
+    getMoreData(b, function (c) {
+      console.log(c);
+    });
+  });
+});
+```
+
+---
+
+## 6. Buffer
+
+**Q: What is Buffer in Node.js?**
+
+**Answer:**  
+Buffer is used to handle binary data in Node.js.  
+It is very useful when we work with files, images or network data.  
+Buffer is available globally.
+
+**Example:**
+```js
+const buf = Buffer.from("Hello");
+console.log(buf); // <Buffer 48 65 6c 6c 6f>
+```
+
+---
+
+## 7. REPL
+
+**Q: What is REPL?**
+
+**Answer:**  
+REPL stands for Read Eval Print Loop.  
+It is the interactive terminal of Node.js.  
+We can write and test JavaScript code directly in the terminal.
+
+**Example:**
+```bash
+node
+> 2 + 3
+5
+```
+
+---
+
+## 8. Streams
+
+**Q: What are Streams in Node.js?**
+
+**Answer:**  
+Streams allow us to process data piece by piece.  
+We do not need to load the entire file into memory.  
+This makes it efficient for large files.
+
+**Example:**
+```js
+const fs = require("fs");
+const stream = fs.createReadStream("file.txt");
+stream.on("data", (chunk) => {
+  console.log(chunk);
+});
+```
+
+---
+
+## 9. createReadStream
+
+**Q: What is createReadStream?**
+
+**Answer:**  
+createReadStream is used to read a file in small chunks.  
+It returns a readable stream.  
+It is memory efficient compared to reading the whole file at once.
+
+**Example:**
+```js
+const fs = require("fs");
+const readStream = fs.createReadStream("bigfile.txt");
+readStream.on("data", (chunk) => {
+  console.log("Received chunk");
+});
+```
+
+---
+
+## 10. async & await in Node.js
+
+**Q: How do we use async and await in Node.js?**
+
+**Answer:**  
+We use async and await to handle asynchronous operations in a clean way.  
+await pauses the execution until the Promise is resolved.  
+It makes the code look like normal synchronous code.
+
+**Example:**
+```js
+const fs = require("fs").promises;
+
+async function readFile() {
+  const data = await fs.readFile("file.txt", "utf8");
+  console.log(data);
+}
+readFile();
+```

@@ -1,0 +1,195 @@
+---
+title: JavaScript Basics
+description: Common interview questions on JavaScript fundamentals with simple spoken answers and short examples.
+---
+
+## 1. null & undefined
+
+**Q: What is the difference between null and undefined?**
+
+**Answer:**  
+Undefined means a variable is declared but we have not given any value yet.  
+Null means we have intentionally set the value as empty.  
+JavaScript gives undefined by default.  
+We set null ourselves.
+
+**Example:**
+```js
+let a;
+console.log(a); // undefined
+
+let b = null;
+console.log(b); // null
+```
+
+---
+
+## 2. == and ===
+
+**Q: What is the difference between == and ===?**
+
+**Answer:**  
+== checks only the value.  
+=== checks both value and type.  
+We should always use ===.  
+It avoids unexpected results.
+
+**Example:**
+```js
+5 == "5"   // true
+5 === "5"  // false
+```
+
+---
+
+## 3. typeof & type casting
+
+**Q: What is typeof and type casting?**
+
+**Answer:**  
+typeof tells us the data type of a value.  
+Type casting means converting one type into another type.  
+We can convert string to number or number to string.
+
+**Example:**
+```js
+typeof 10        // "number"
+Number("20")     // 20
+String(30)       // "30"
+```
+
+---
+
+## 4. map vs forEach
+
+**Q: What is the difference between map and forEach?**
+
+**Answer:**  
+forEach is used only to loop through an array.  
+It does not return anything.  
+map also loops through the array.  
+But map returns a new array.
+
+**Example:**
+```js
+const numbers = [1, 2, 3];
+
+numbers.forEach(n => console.log(n));
+
+const doubled = numbers.map(n => n * 2);
+// [2, 4, 6]
+```
+
+---
+
+## 5. slice & splice
+
+**Q: What is the difference between slice and splice?**
+
+**Answer:**  
+slice does not change the original array.  
+It just returns a part of the array.  
+splice changes the original array.  
+We can add or remove items using splice.
+
+**Example:**
+```js
+const arr = [1, 2, 3, 4];
+
+arr.slice(1, 3);   // [2, 3]  (original remains same)
+arr.splice(1, 2);  // removes 2 items from index 1
+```
+
+---
+
+## 6. Hoisting
+
+**Q: What is hoisting?**
+
+**Answer:**  
+Hoisting means JavaScript moves variable and function declarations to the top of the scope.  
+Only the declaration is moved.  
+The actual value assignment stays in its place.
+
+**Example:**
+```js
+console.log(a); // undefined
+var a = 10;
+```
+
+---
+
+## 7. Mutable & Immutable
+
+**Q: What is mutable and immutable?**
+
+**Answer:**  
+Mutable means we can change the value after creating it.  
+Arrays and objects are mutable.  
+Immutable means we cannot change the value.  
+Strings and numbers are immutable.
+
+**Example:**
+```js
+let str = "hello";
+str[0] = "H";     // does not change
+
+let arr = [1, 2];
+arr[0] = 10;      // changes
+```
+
+---
+
+## 8. let vs var
+
+**Q: What is the difference between let and var?**
+
+**Answer:**  
+var is function scoped.  
+let is block scoped.  
+let is safer and modern.  
+We should prefer let over var.
+
+**Example:**
+```js
+if (true) {
+  var a = 10;
+  let b = 20;
+}
+console.log(a); // 10
+console.log(b); // Error
+```
+
+---
+
+## 9. Arrow function
+
+**Q: What is an arrow function?**
+
+**Answer:**  
+Arrow function is a short way to write a function.  
+It does not have its own `this`.  
+It takes `this` from the surrounding scope.
+
+**Example:**
+```js
+const add = (a, b) => a + b;
+console.log(add(2, 3)); // 5
+```
+
+---
+
+## 10. Template literals
+
+**Q: What are template literals?**
+
+**Answer:**  
+Template literals allow us to write variables inside a string easily.  
+We use backticks instead of quotes.  
+It also supports multi-line strings.
+
+**Example:**
+```js
+const name = "Aniket";
+console.log(`Hello ${name}`);
+```
