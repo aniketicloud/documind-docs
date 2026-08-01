@@ -24,7 +24,7 @@ This makes React fast.
 When you update a state, React re-renders only the necessary components.
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Reconciliation**
     React uses a diffing algorithm to find the minimal set of changes needed.
 
@@ -57,7 +57,7 @@ function Child({ name }) {
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Props** = input from parent (immutable from child side)  
     **State** = internal data that can change over time
 
@@ -94,7 +94,7 @@ This improves performance.
 Instead of updating the whole page, React updates only one button text.
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     Updating the real DOM is expensive.  
     React batches changes and applies them efficiently.
 
@@ -125,7 +125,7 @@ Child.propTypes = {
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     In modern projects, TypeScript is preferred over PropTypes.
 
     ```tsx
@@ -162,7 +162,7 @@ useEffect(() => {
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Class lifecycle → Hooks mapping**
     - `componentDidMount` → `useEffect(() => {}, [])`
     - `componentDidUpdate` → `useEffect(() => {})`
@@ -236,7 +236,7 @@ npx create-react-app my-app
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Current recommendation**
     Prefer **Vite** for new projects — much faster startup and build times.
 
