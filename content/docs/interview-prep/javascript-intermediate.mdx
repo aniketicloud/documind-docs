@@ -34,7 +34,7 @@ console.log(counter()); // 2
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Why closures are powerful**
 
     The inner function keeps a reference to the outer function's variables even after the outer function has finished.
@@ -92,7 +92,7 @@ console.log(name); // Aniket
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Object destructuring**
 
     ```js
@@ -147,7 +147,7 @@ console.log(obj2); // { a: 1, b: 2 }
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Copying objects (shallow)**
 
     ```js
@@ -206,7 +206,7 @@ person.greet(); // Aniket
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Rules of `this`**
 
     1. In a method → object that owns the method
@@ -258,7 +258,7 @@ greet.call(user); // Aniket
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **call vs apply vs bind**
 
     ```js
@@ -306,7 +306,7 @@ promise.then(result => console.log(result));
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **States**
     - pending → waiting
     - fulfilled → success (resolved)
@@ -359,7 +359,7 @@ getData();
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Basic pattern**
 
     ```js
@@ -410,7 +410,7 @@ It is useful to create a private scope.
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Why use IIFE?**
     Before modules existed, IIFE was the main way to create private variables.
 
@@ -454,7 +454,7 @@ function test() {
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Types of scope**
     - Global scope
     - Function scope
@@ -500,7 +500,7 @@ const p1 = new Person("Aniket");
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Class is just syntactic sugar**
 
     Under the hood JavaScript still uses prototypes.
@@ -548,7 +548,7 @@ Person.prototype.greet = function () {
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Prototype chain**
 
     When you access a property, JS looks on the object first, then on its prototype, then further up the chain until `Object.prototype`.
@@ -595,7 +595,7 @@ d.speak(); // Animal sound
 ```
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Modern way (class)**
 
     ```js
@@ -648,7 +648,7 @@ They help us write clean and reusable code.
 Common patterns are Module pattern, Singleton and Observer.
 
 <Accordions type="single">
-  <Accordion title="Detailed Explanation + More Examples">
+  <Accordion title="More">
     **Common patterns in JS**
 
     - **Module Pattern** → private + public methods (IIFE or ES modules)
