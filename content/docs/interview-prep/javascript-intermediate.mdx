@@ -33,6 +33,45 @@ console.log(counter()); // 1
 console.log(counter()); // 2
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Why closures are powerful**
+
+    The inner function keeps a reference to the outer function's variables even after the outer function has finished.
+
+    **More examples**
+
+    ```js
+    // Private counter
+    function createCounter() {
+      let count = 0;
+      return {
+        increment() { count++; return count; },
+        get() { return count; }
+      };
+    }
+
+    const c = createCounter();
+    console.log(c.increment()); // 1
+    console.log(c.get());       // 1
+    // count is private — cannot access from outside
+    ```
+
+    ```js
+    // Common interview mistake with loops
+    for (var i = 0; i < 3; i++) {
+      setTimeout(() => console.log(i), 100); // 3 3 3
+    }
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => console.log(i), 100); // 0 1 2
+    }
+    ```
+
+    Closures are used in modules, event handlers, and React hooks (useState, useEffect).
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 2. Destructuring
@@ -51,6 +90,41 @@ const user = { name: "Aniket", age: 28 };
 const { name, age } = user;
 console.log(name); // Aniket
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Object destructuring**
+
+    ```js
+    const user = { name: "Aniket", age: 28, city: "Pune" };
+
+    // Rename + default value
+    const { name: fullName, age, country = "India" } = user;
+    console.log(fullName, country); // Aniket India
+    ```
+
+    **Array destructuring**
+
+    ```js
+    const colors = ["red", "green", "blue"];
+    const [first, second] = colors;
+    const [, , third] = colors; // skip values
+
+    // Swap variables
+    let a = 1, b = 2;
+    [a, b] = [b, a];
+    ```
+
+    **Function parameters**
+
+    ```js
+    function greet({ name, age = 18 }) {
+      console.log(`Hello ${name}, age ${age}`);
+    }
+    greet({ name: "Aniket" });
+    ```
+  </Accordion>
+</Accordions>
 
 ---
 
@@ -71,6 +145,41 @@ const obj1 = { a: 1 };
 const obj2 = { ...obj1, b: 2 };
 console.log(obj2); // { a: 1, b: 2 }
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Copying objects (shallow)**
+
+    ```js
+    const original = { name: "Aniket", skills: ["JS", "React"] };
+    const copy = { ...original };
+
+    copy.name = "Rahul";
+    console.log(original.name); // still "Aniket"
+
+    // Nested arrays/objects are still shared (shallow copy)
+    copy.skills.push("Node");
+    console.log(original.skills); // ["JS", "React", "Node"]
+    ```
+
+    **Merging**
+
+    ```js
+    const defaults = { theme: "dark", lang: "en" };
+    const userSettings = { theme: "light" };
+    const final = { ...defaults, ...userSettings };
+    // { theme: "light", lang: "en" }
+    ```
+
+    **Arrays**
+
+    ```js
+    const a = [1, 2];
+    const b = [3, 4];
+    const combined = [...a, ...b]; // [1, 2, 3, 4]
+    ```
+  </Accordion>
+</Accordions>
 
 ---
 
@@ -96,6 +205,36 @@ const person = {
 person.greet(); // Aniket
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Rules of `this`**
+
+    1. In a method → object that owns the method
+    2. Alone / simple function → global object (or undefined in strict mode)
+    3. Arrow function → inherits from outer scope
+    4. With `new` → the newly created object
+    5. With call/apply/bind → whatever you set
+
+    **Examples**
+
+    ```js
+    function show() {
+      console.log(this);
+    }
+    show(); // window / global (non-strict)
+
+    const obj = {
+      name: "Aniket",
+      show: function() { console.log(this.name); }
+    };
+    obj.show(); // "Aniket"
+
+    const fn = obj.show;
+    fn(); // undefined (lost context)
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 5. call, apply, bind
@@ -118,6 +257,33 @@ const user = { name: "Aniket" };
 greet.call(user); // Aniket
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **call vs apply vs bind**
+
+    ```js
+    function introduce(city, country) {
+      console.log(`${this.name} from ${city}, ${country}`);
+    }
+
+    const person = { name: "Aniket" };
+
+    // call → arguments listed one by one
+    introduce.call(person, "Pune", "India");
+
+    // apply → arguments in an array
+    introduce.apply(person, ["Pune", "India"]);
+
+    // bind → returns a new function
+    const boundFn = introduce.bind(person, "Pune");
+    boundFn("India");
+    ```
+
+    **Real use case**
+    Borrowing methods or fixing `this` in callbacks.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 6. Promise
@@ -138,6 +304,37 @@ const promise = new Promise((resolve, reject) => {
 });
 promise.then(result => console.log(result));
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **States**
+    - pending → waiting
+    - fulfilled → success (resolved)
+    - rejected → error
+
+    **Full example**
+
+    ```js
+    function fetchUser() {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          const success = true;
+          if (success) resolve({ name: "Aniket" });
+          else reject("Failed to fetch");
+        }, 1000);
+      });
+    }
+
+    fetchUser()
+      .then(user => console.log(user.name))
+      .catch(err => console.error(err))
+      .finally(() => console.log("Done"));
+    ```
+
+    **Promise chaining**
+    Each `.then` returns a new Promise, so you can chain them.
+  </Accordion>
+</Accordions>
 
 ---
 
@@ -161,6 +358,37 @@ async function getData() {
 getData();
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Basic pattern**
+
+    ```js
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/user");
+        const data = await res.json();
+        console.log(data);
+      } catch (err) {
+        console.error("Error:", err);
+      }
+    }
+    ```
+
+    **Parallel vs sequential**
+
+    ```js
+    // Sequential (slower)
+    const a = await fetchA();
+    const b = await fetchB();
+
+    // Parallel (faster)
+    const [a, b] = await Promise.all([fetchA(), fetchB()]);
+    ```
+
+    An `async` function always returns a Promise.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 8. IIFE
@@ -180,6 +408,28 @@ It is useful to create a private scope.
   console.log("I run immediately");
 })();
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Why use IIFE?**
+    Before modules existed, IIFE was the main way to create private variables.
+
+    ```js
+    const counter = (function () {
+      let count = 0;
+      return {
+        inc() { return ++count; },
+        get() { return count; }
+      };
+    })();
+
+    console.log(counter.inc()); // 1
+    // count is completely private
+    ```
+
+    Modern code uses modules (`import`/`export`) instead of IIFE in most cases.
+  </Accordion>
+</Accordions>
 
 ---
 
@@ -202,6 +452,29 @@ function test() {
   let localVar = "I am local";
 }
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Types of scope**
+    - Global scope
+    - Function scope
+    - Block scope (`let` / `const`)
+    - Module scope
+
+    **Lexical scope**
+    Inner functions can access outer variables (this is the foundation of closures).
+
+    ```js
+    function outer() {
+      const msg = "Hello";
+      function inner() {
+        console.log(msg); // can access
+      }
+      inner();
+    }
+    ```
+  </Accordion>
+</Accordions>
 
 ---
 
@@ -226,6 +499,31 @@ class Person {
 const p1 = new Person("Aniket");
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Class is just syntactic sugar**
+
+    Under the hood JavaScript still uses prototypes.
+
+    ```js
+    class Person {
+      constructor(name) {
+        this.name = name;
+      }
+      greet() {
+        console.log(`Hi ${this.name}`);
+      }
+    }
+
+    const p = new Person("Aniket");
+    p.greet();
+
+    console.log(typeof Person); // "function"
+    console.log(p instanceof Person); // true
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 11. Prototype
@@ -248,6 +546,28 @@ Person.prototype.greet = function () {
   console.log("Hello " + this.name);
 };
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Prototype chain**
+
+    When you access a property, JS looks on the object first, then on its prototype, then further up the chain until `Object.prototype`.
+
+    ```js
+    function Animal(name) {
+      this.name = name;
+    }
+    Animal.prototype.speak = function () {
+      console.log(`${this.name} makes a sound`);
+    };
+
+    const dog = new Animal("Tommy");
+    dog.speak(); // uses the method from prototype
+    ```
+
+    All instances share the same prototype methods → memory efficient.
+  </Accordion>
+</Accordions>
 
 ---
 
@@ -274,6 +594,46 @@ const d = new Dog();
 d.speak(); // Animal sound
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Modern way (class)**
+
+    ```js
+    class Animal {
+      constructor(name) {
+        this.name = name;
+      }
+      speak() {
+        console.log(`${this.name} makes a sound`);
+      }
+    }
+
+    class Dog extends Animal {
+      speak() {
+        console.log(`${this.name} barks`);
+      }
+    }
+
+    const dog = new Dog("Bruno");
+    dog.speak(); // Bruno barks
+    ```
+
+    **Old way (prototype)**
+
+    ```js
+    function Animal(name) {
+      this.name = name;
+    }
+    Animal.prototype.speak = function () { /* ... */ };
+
+    function Dog(name) {
+      Animal.call(this, name);
+    }
+    Dog.prototype = Object.create(Animal.prototype);
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 13. Design Pattern
@@ -286,3 +646,27 @@ d.speak(); // Animal sound
 Design patterns are ready-made solutions for common problems in code.  
 They help us write clean and reusable code.  
 Common patterns are Module pattern, Singleton and Observer.
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Common patterns in JS**
+
+    - **Module Pattern** → private + public methods (IIFE or ES modules)
+    - **Singleton** → only one instance
+    - **Observer / Pub-Sub** → event-driven (used heavily in frontend)
+    - **Factory** → create objects without `new`
+    - **Constructor / Prototype** → classic object creation
+
+    Example of simple Module:
+
+    ```js
+    const calculator = (function () {
+      let result = 0;
+      return {
+        add(n) { result += n; },
+        get() { return result; }
+      };
+    })();
+    ```
+  </Accordion>
+</Accordions>
