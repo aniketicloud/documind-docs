@@ -3,9 +3,16 @@ title: React.js Basics
 description: Basic React.js interview questions with simple spoken answers and short examples.
 ---
 
+# React.js Basics
+
+**Difficulty**: Intermediate  
+**Revision Tip**: Build small components while revising.
+
 ## 1. How React works
 
 **Q: How does React work?**
+
+**Why asked**: Core mental model.
 
 **Answer:**  
 React creates a Virtual DOM.  
@@ -16,11 +23,25 @@ This makes React fast.
 **Example:**  
 When you update a state, React re-renders only the necessary components.
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Reconciliation**
+    React uses a diffing algorithm to find the minimal set of changes needed.
+
+    **Key ideas**
+    - Declarative UI (describe what you want, not how)
+    - Components are pure functions of state + props
+    - Virtual DOM is an in-memory representation
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 2. State & Props
 
 **Q: What is the difference between State and Props?**
+
+**Why asked**: Data flow fundamentals.
 
 **Answer:**  
 Props are used to pass data from parent component to child component.  
@@ -35,11 +56,33 @@ function Child({ name }) {
 }
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Props** = input from parent (immutable from child side)  
+    **State** = internal data that can change over time
+
+    ```js
+    function Counter() {
+      const [count, setCount] = useState(0);
+      return (
+        <button onClick={() => setCount(count + 1)}>
+          Clicked {count} times
+        </button>
+      );
+    }
+    ```
+
+    Data flows one way: Parent → Child via props.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 3. Virtual DOM
 
 **Q: What is Virtual DOM?**
+
+**Why asked**: Performance model.
 
 **Answer:**  
 Virtual DOM is a lightweight copy of the real DOM.  
@@ -50,11 +93,22 @@ This improves performance.
 **Example:**  
 Instead of updating the whole page, React updates only one button text.
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    Updating the real DOM is expensive.  
+    React batches changes and applies them efficiently.
+
+    Modern React (with concurrent features) still uses this idea but with more sophisticated scheduling.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 4. Props validation
 
 **Q: What is Props validation?**
+
+**Why asked**: Type safety in development.
 
 **Answer:**  
 Props validation means checking the type of props that a component receives.  
@@ -70,11 +124,30 @@ Child.propTypes = {
 };
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    In modern projects, TypeScript is preferred over PropTypes.
+
+    ```tsx
+    type Props = {
+      name: string;
+      age?: number;
+    };
+
+    function Child({ name, age }: Props) {
+      return <div>{name}</div>;
+    }
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 5. Lifecycle methods
 
 **Q: What are Lifecycle methods?**
+
+**Why asked**: Understanding component phases.
 
 **Answer:**  
 Lifecycle methods are special functions that run at different stages of a component.  
@@ -88,11 +161,29 @@ useEffect(() => {
 }, []);
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Class lifecycle → Hooks mapping**
+    - `componentDidMount` → `useEffect(() => {}, [])`
+    - `componentDidUpdate` → `useEffect(() => {})`
+    - `componentWillUnmount` → return cleanup function inside useEffect
+
+    ```js
+    useEffect(() => {
+      const id = setInterval(() => {}, 1000);
+      return () => clearInterval(id); // cleanup
+    }, []);
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 6. Routing
 
 **Q: What is Routing in React?**
+
+**Why asked**: SPA navigation.
 
 **Answer:**  
 Routing is used to show different pages in a single page application.  
@@ -109,6 +200,8 @@ It changes the view without refreshing the page.
 ## 7. Fragment
 
 **Q: What is a Fragment?**
+
+**Why asked**: Avoiding extra DOM nodes.
 
 **Answer:**  
 Fragment is used to group multiple elements without adding an extra node to the DOM.  
@@ -130,6 +223,8 @@ return (
 
 **Q: What is Create React App?**
 
+**Why asked**: Project setup knowledge.
+
 **Answer:**  
 Create React App is a tool to quickly set up a new React project.  
 It gives us a ready environment with everything configured.  
@@ -139,3 +234,14 @@ Nowadays many people also use Vite.
 ```bash
 npx create-react-app my-app
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Current recommendation**
+    Prefer **Vite** for new projects — much faster startup and build times.
+
+    ```bash
+    npm create vite@latest my-app -- --template react
+    ```
+  </Accordion>
+</Accordions>

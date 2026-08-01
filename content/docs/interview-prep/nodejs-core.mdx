@@ -3,9 +3,16 @@ title: Node.js Core
 description: Core Node.js interview questions with simple spoken answers and short examples.
 ---
 
+# Node.js Core
+
+**Difficulty**: Intermediate  
+**Revision Tip**: Practice the code examples in your terminal.
+
 ## 1. What is Node.js
 
 **Q: What is Node.js?**
+
+**Why asked**: Foundation of backend JavaScript.
 
 **Answer:**  
 Node.js is a runtime that allows us to run JavaScript on the server.  
@@ -18,11 +25,27 @@ It is mainly used for building backend applications and APIs.
 console.log("Hello from Node.js");
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Key points**
+    - Single-threaded with event loop (non-blocking I/O)
+    - Great for I/O heavy apps (APIs, real-time, chat)
+    - Not ideal for heavy CPU tasks (use worker threads)
+
+    **What makes it special**
+    - Same language on frontend and backend
+    - Huge npm ecosystem
+    - Excellent for microservices and real-time apps
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 2. Event Loop
 
 **Q: What is the Event Loop?**
+
+**Why asked**: Core of Node.js concurrency model.
 
 **Answer:**  
 The Event Loop is the heart of Node.js.  
@@ -41,11 +64,37 @@ console.log("End");
 // Output: Start → End → Timeout
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Phases of the Event Loop** (simplified)
+    1. Timers (setTimeout, setInterval)
+    2. Pending callbacks
+    3. Idle / prepare
+    4. Poll (I/O)
+    5. Check (setImmediate)
+    6. Close callbacks
+
+    **Microtasks vs Macrotasks**
+    - Promises and `process.nextTick` run before the next event loop phase (microtasks).
+    - `setTimeout` is a macrotask.
+
+    ```js
+    console.log("1");
+    setTimeout(() => console.log("2"), 0);
+    Promise.resolve().then(() => console.log("3"));
+    console.log("4");
+    // Output: 1 4 3 2
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 3. Modules
 
 **Q: What are modules in Node.js?**
+
+**Why asked**: Code organization.
 
 **Answer:**  
 Modules are separate files that contain reusable code.  
@@ -65,11 +114,32 @@ const add = require("./math");
 console.log(add(2, 3)); // 5
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **CommonJS vs ES Modules**
+
+    ```js
+    // CommonJS (default in Node)
+    module.exports = { add };
+    const { add } = require("./math");
+
+    // ES Modules ("type": "module" in package.json)
+    export function add(a, b) { return a + b; }
+    import { add } from "./math.js";
+    ```
+
+    **Module caching**
+    Node caches modules after the first `require`. Subsequent requires return the same object.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 4. Global object
 
 **Q: What is the global object in Node.js?**
+
+**Why asked**: Environment awareness.
 
 **Answer:**  
 The global object is available everywhere in a Node.js application.  
@@ -82,11 +152,29 @@ console.log(global);
 console.log(process.version);
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Important globals**
+    - `process` → env, argv, cwd, exit
+    - `Buffer` → binary data
+    - `__dirname`, `__filename` (CommonJS)
+    - `setTimeout`, `setInterval`, `setImmediate`
+
+    ```js
+    console.log(process.env.NODE_ENV);
+    console.log(process.argv);
+    console.log(__dirname);
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 5. Callback Hell
 
 **Q: What is Callback Hell?**
+
+**Why asked**: Historical pain point & modern solutions.
 
 **Answer:**  
 Callback Hell happens when we write many nested callbacks.  
@@ -105,11 +193,30 @@ getData(function (a) {
 });
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Modern solution with async/await**
+
+    ```js
+    async function load() {
+      const a = await getData();
+      const b = await getMoreData(a);
+      const c = await getMoreData(b);
+      console.log(c);
+    }
+    ```
+
+    Promises and async/await flattened the pyramid of doom.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 6. Buffer
 
 **Q: What is Buffer in Node.js?**
+
+**Why asked**: Binary data handling.
 
 **Answer:**  
 Buffer is used to handle binary data in Node.js.  
@@ -122,11 +229,28 @@ const buf = Buffer.from("Hello");
 console.log(buf); // <Buffer 48 65 6c 6c 6f>
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Common operations**
+
+    ```js
+    const buf = Buffer.from("Hello World");
+    console.log(buf.toString());        // Hello World
+    console.log(buf.toString("hex"));   // 48656c6c6f...
+    console.log(buf.length);
+
+    const buf2 = Buffer.alloc(10); // empty buffer of size 10
+    ```
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 7. REPL
 
 **Q: What is REPL?**
+
+**Why asked**: Quick testing tool.
 
 **Answer:**  
 REPL stands for Read Eval Print Loop.  
@@ -146,6 +270,8 @@ node
 
 **Q: What are Streams in Node.js?**
 
+**Why asked**: Efficient data handling.
+
 **Answer:**  
 Streams allow us to process data piece by piece.  
 We do not need to load the entire file into memory.  
@@ -160,11 +286,26 @@ stream.on("data", (chunk) => {
 });
 ```
 
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    **Types of streams**
+    - Readable
+    - Writable
+    - Duplex
+    - Transform
+
+    **Why streams matter**
+    Reading a 2GB file with `fs.readFile` would load everything into memory. Streams process it in chunks → much lower memory usage.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 9. createReadStream
 
 **Q: What is createReadStream?**
+
+**Why asked**: Practical stream usage.
 
 **Answer:**  
 createReadStream is used to read a file in small chunks.  
@@ -186,6 +327,8 @@ readStream.on("data", (chunk) => {
 
 **Q: How do we use async and await in Node.js?**
 
+**Why asked**: Modern async patterns.
+
 **Answer:**  
 We use async and await to handle asynchronous operations in a clean way.  
 await pauses the execution until the Promise is resolved.  
@@ -201,3 +344,18 @@ async function readFile() {
 }
 readFile();
 ```
+
+<Accordions type="single">
+  <Accordion title="Detailed Explanation + More Examples">
+    Prefer the promise-based `fs.promises` API over callback style.
+
+    ```js
+    import { readFile, writeFile } from "fs/promises";
+
+    async function copy() {
+      const content = await readFile("input.txt", "utf8");
+      await writeFile("output.txt", content);
+    }
+    ```
+  </Accordion>
+</Accordions>
