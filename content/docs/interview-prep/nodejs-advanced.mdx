@@ -3,9 +3,16 @@ title: Node.js Advanced
 description: Advanced Node.js interview questions covering middleware, CORS, authentication and more.
 ---
 
+# Node.js Advanced
+
+**Difficulty**: Intermediate – Advanced  
+**Revision Tip**: Relate each topic to real Express projects.
+
 ## 1. Middlewares
 
 **Q: What are middlewares in Node.js?**
+
+**Why asked**: Core of Express architecture.
 
 **Answer:**  
 Middleware is a function that runs between the request and the response.  
@@ -20,11 +27,35 @@ app.use((req, res, next) => {
 });
 ```
 
+<Accordions type="single">
+  <Accordion title="More">
+    Middleware has access to `req`, `res`, and `next`.
+
+    Common uses:
+    - Logging
+    - Authentication
+    - Body parsing
+    - Error handling
+
+    ```js
+    // Error handling middleware (4 parameters)
+    app.use((err, req, res, next) => {
+      console.error(err);
+      res.status(500).send("Something broke");
+    });
+    ```
+
+    Order matters. Middleware runs in the order you define it.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 2. Different types of HTTP requests
 
 **Q: What are the different types of HTTP requests?**
+
+**Why asked**: REST API fundamentals.
 
 **Answer:**  
 The main HTTP methods are GET, POST, PUT, PATCH and DELETE.  
@@ -41,11 +72,27 @@ app.put("/users/:id", (req, res) => {});
 app.delete("/users/:id", (req, res) => {});
 ```
 
+<Accordions type="single">
+  <Accordion title="More">
+    | Method | Purpose |
+    |--------|---------|
+    | GET | Read data |
+    | POST | Create new resource |
+    | PUT | Replace entire resource |
+    | PATCH | Partial update |
+    | DELETE | Remove resource |
+
+    GET should be safe and idempotent (no side effects).
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 3. Enable CORS
 
 **Q: How do you enable CORS in Node.js?**
+
+**Why asked**: Cross-origin requests are common in real apps.
 
 **Answer:**  
 CORS allows a server to accept requests from different domains.  
@@ -58,11 +105,30 @@ const cors = require("cors");
 app.use(cors());
 ```
 
+<Accordions type="single">
+  <Accordion title="More">
+    ```js
+    // Allow only specific origin
+    app.use(cors({
+      origin: "https://myfrontend.com",
+      methods: ["GET", "POST"]
+    }));
+
+    // Manual headers
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    ```
+
+    Without CORS, browsers block requests from other domains for security.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 4. Authentication
 
 **Q: What is Authentication in Node.js?**
+
+**Why asked**: Security is critical.
 
 **Answer:**  
 Authentication means verifying who the user is.  
@@ -77,11 +143,31 @@ if (!req.headers.authorization) {
 }
 ```
 
+<Accordions type="single">
+  <Accordion title="More">
+    **JWT flow**
+    1. User logs in → server creates a token
+    2. Client stores the token
+    3. Client sends token in `Authorization` header
+    4. Server verifies the token on protected routes
+
+    ```js
+    const token = jwt.sign({ userId: 123 }, process.env.JWT_SECRET, {
+      expiresIn: "1d"
+    });
+    ```
+
+    Always store secrets in environment variables.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 5. Logging
 
 **Q: What is Logging in Node.js?**
+
+**Why asked**: Production debugging.
 
 **Answer:**  
 Logging means recording important events and errors in the application.  
@@ -94,11 +180,22 @@ const morgan = require("morgan");
 app.use(morgan("dev"));
 ```
 
+<Accordions type="single">
+  <Accordion title="More">
+    - `morgan` → HTTP request logging
+    - `winston` / `pino` → application logs (info, error, warn)
+
+    Good logs make production debugging much easier.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 6. Unit Testing
 
 **Q: What is Unit Testing in Node.js?**
+
+**Why asked**: Code quality.
 
 **Answer:**  
 Unit testing means testing small pieces of code separately.  
@@ -112,11 +209,30 @@ test("adds two numbers", () => {
 });
 ```
 
+<Accordions type="single">
+  <Accordion title="More">
+    Focus on pure functions first.
+
+    ```js
+    // math.test.js
+    const { add } = require("./math");
+
+    test("adds 2 + 3", () => {
+      expect(add(2, 3)).toBe(5);
+    });
+    ```
+
+    Run with `npm test`.
+  </Accordion>
+</Accordions>
+
 ---
 
 ## 7. BLOB
 
 **Q: What is BLOB?**
+
+**Why asked**: Binary data handling.
 
 **Answer:**  
 BLOB means Binary Large Object.  
@@ -129,3 +245,16 @@ Blob is also available in newer versions of Node.
 const blob = new Blob(["Hello World"], { type: "text/plain" });
 console.log(blob.size); // 11
 ```
+
+<Accordions type="single">
+  <Accordion title="More">
+    In Node.js, prefer `Buffer` for most binary work.
+
+    ```js
+    const buf = Buffer.from("Hello");
+    console.log(buf.toString()); // Hello
+    ```
+
+    Blob is more common in browser / fetch APIs.
+  </Accordion>
+</Accordions>
