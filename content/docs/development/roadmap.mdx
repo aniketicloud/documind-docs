@@ -36,7 +36,7 @@ flowchart TB
   end
 
   subgraph next [Next critical path]
-    DOCX[DOCX / XLSX parsers]
+    XLSX[XLSX parsers]
     Prod[Hardening D]
   end
 
@@ -47,7 +47,7 @@ flowchart TB
   ChatUI --> LLM
   Qdrant --> LLM
   LLM --> Prod
-  Ingest --> DOCX
+  Ingest --> XLSX
 ```
 
 ---
@@ -66,7 +66,7 @@ flowchart TB
 | Redis | Queue + demo | Ingest job list + `/redis` playground |
 | Qdrant | **In use** | Chunk vectors; filtered search |
 | Document ingest pipeline | **A + B2** | Jobs, worker, extract/embed for text |
-| Document parsing | **Text + PDF + OCR** | txt/md/csv + PyMuPDF + Tesseract; DOCX open |
+| Document parsing | **Text + PDF + OCR + DOCX** | txt/md/csv + PyMuPDF + Tesseract + Mammoth; XLSX open |
 | RAG / embeddings | **Done (B2)** | Gemini embed + Qdrant |
 | LLM integration | **Done (B3)** | Streaming chat APIs + UI |
 | Production hardening | Thin | Secrets, rate limits, observability |
@@ -196,7 +196,8 @@ Document statuses:
 | P1.4–P1.5 | Chunk + Qdrant + embeddings | RAG store | **Done (B2)** |
 | P1.6 | Chat RAG + LLM stream | Product value | **Done (B2+B3)** |
 | **P1.7** | **Sources footer** (doc/chunk) | Trust | **Done** |
-| **P1.8** | **DOCX / XLSX** | Office files | **Next** when PDF stable |
+| **P1.8** | **DOCX** (Mammoth) | Word files | **Done** |
+| **P1.9** | **XLSX** | Spreadsheets | Later |
 
 ### P2 — Chat product depth
 
@@ -259,9 +260,11 @@ Would ignore document bytes. Superseded by B2/B3 for Documind’s north star.
 
 - **F1 (done):** text PDF via **pdf-extract** (PyMuPDF)  
 - **F1b (done):** OCR via **PyMuPDF render + Tesseract**, `PDF_OCR_MODE=auto`, 30-page OCR cap, free/local  
-- **Later:** DOCX when PDF path is stable  
+- **DOCX (done):** `.docx` via **Mammoth** in the Node worker  
+- **Later:** XLSX / legacy `.doc`  
 
-**Exit criteria F1b:** scanned PDF → OCR → `indexed` (or honest `failed`) → chat when text found — **met**.
+**Exit criteria F1b:** scanned PDF → OCR → `indexed` (or honest `failed`) → chat when text found — **met**.  
+**Exit criteria DOCX:** `.docx` → Mammoth → `indexed` (or honest `failed`) → chat — **met**.
 
 ### Option G — **Docs / ops only**
 
@@ -273,16 +276,18 @@ Publish `documind-docs` to Vercel; keep app backlog frozen.
 
 | If you want… | Choose |
 |--------------|--------|
-| Better scanned PDFs | **F1b (OCR)** |
-| Trust / “which source?” | **Sources footer (done)** |
+| Better scanned PDFs | **F1b (OCR)** — done |
+| Trust / “which source?” | **Sources footer** — done |
+| Word (`.docx`) | **DOCX** — done |
 | Ship current product safely | **D** |
+| Spreadsheets | **XLSX** (later) |
 | Trust / polish (layout, stop/regen) | **E** |
 | Public documentation hosting | **G** |
 
 **Architect recommendation now:**  
-**F → D**, with **E**/citations interleaved as small PRs.
+**D** (production hardening) if you want real users; otherwise **E** (UX polish) or **XLSX**.
 
-Historical path that got us here: **A → B2 → B3**.
+Historical path: **A → B2 → B3 → F1/F1b → sources → DOCX**.
 
 ---
 
@@ -298,6 +303,7 @@ Historical path that got us here: **A → B2 → B3**.
 - [x] Text PDF extraction (F1)  
 - [x] OCR for scanned PDFs (F1b)  
 - [x] Citation UI (sources footer)  
+- [x] DOCX extract (Mammoth)  
 - [ ] Production hardening checklist  
 
 ---
@@ -306,8 +312,8 @@ Historical path that got us here: **A → B2 → B3**.
 
 Reply with one of:
 
-- ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ / ~~`Do sources`~~ — **done**  
-- `Do DOCX` — Word extract (later)  
+- ~~`Do A`~~ / ~~`Do B2`~~ / ~~`Do B3`~~ / ~~`Do sources`~~ / ~~`Do DOCX`~~ — **done**  
+- `Do XLSX` — spreadsheet extract (later)  
 - `Do D` — production hardening  
 - `Do E` — UX polish  
 - `Do G` — deploy docs to Vercel  

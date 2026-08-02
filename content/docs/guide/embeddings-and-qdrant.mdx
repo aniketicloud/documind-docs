@@ -199,7 +199,7 @@ Old embedding model **`text-embedding-004`** is shut down; modern path is **`gem
 
 - Switching chat model does **not** “retrain” or re-embed documents  
 - **`indexed`** after re-ingest means “vectors written with the **current** embed model” (for text files that produced chunks)  
-- Text PDFs work (F1); scanned PDFs need OCR (F1b); DOCX/XLSX full extract still open  
+- Text PDFs work (F1); scanned PDFs need OCR (F1b); **DOCX** via Mammoth; XLSX still open  
 
 ---
 
@@ -215,7 +215,7 @@ Checklist:
 
 1. Status **`indexed`** on My documents?  
 2. Worker running?  
-3. Text type (`.txt` / `.md` / `.csv`) or **text-based PDF** with real content?  
+3. Text type (`.txt` / `.md` / `.csv` / **`.docx`**) or **PDF** with real content?  
 4. Re-ingested **after** the embed model migration?  
 5. File in the chat **documents panel**, **checked**, and status **Indexed**?
 

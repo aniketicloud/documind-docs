@@ -166,7 +166,7 @@ docker compose up -d pdf-extract ingest-worker
 
 - OCR quality is **good enough for many scans**, not perfect (skew, handwriting, multi-column).  
 - Long scans are **slow** — that is normal.  
-- **DOCX / Word** is a separate later feature (not this service).  
+- **DOCX** is handled in the Node worker with **Mammoth** (not this Python service).  
 - **Sources footer** shows which chunks grounded each answer (shipped with P1.7).
 
 ---

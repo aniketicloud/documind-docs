@@ -58,9 +58,11 @@ Max size: **50MB**. Images/audio/video/executables rejected.
 | Type | Ingest behavior |
 |------|-----------------|
 | `.txt`, `.md`, `.csv` | Node extract → chunk → Gemini embed → Qdrant |
+| **`.docx`** | Node **Mammoth** → chunk → embed → RAG when **`indexed`** |
 | **Text-based PDF** | Docker **pdf-extract** (PyMuPDF, fast) → embed → RAG when **`indexed`** |
 | **Scanned / image PDF** | Same service runs **OCR** (`auto`) → RAG if text found; else **`failed`** |
-| Word / Excel (binary) | Storage OK; full DOCX extract planned later |
+| Legacy `.doc` | **`failed`** — re-save as `.docx` |
+| Excel (`.xlsx` / `.xls`) | Storage OK; spreadsheet extract later |
 
 Chat uses **retrieved chunks** from **selected + indexed** panel docs. See [Chat](/docs/product/chat), [RAG chat](/docs/guide/rag-chat), and [PDF extract](/docs/guide/pdf-extract).
 

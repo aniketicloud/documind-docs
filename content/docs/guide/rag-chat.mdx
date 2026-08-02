@@ -90,9 +90,10 @@ General chat (no docs selected) and “not indexed yet” answers have **no** so
 | File type | After successful ingest |
 |-----------|-------------------------|
 | `.txt`, `.md`, `.csv` | Vectors → usable for RAG |
+| **`.docx`** | Mammoth → RAG if text found; else **`failed`** |
 | **Text-based PDF** | Fast native extract → RAG |
 | **Scanned PDF** | OCR (Tesseract) → RAG if text found; else **`failed`** |
-| Other office binaries | May be storage-only until DOCX extract |
+| Other office binaries | May be storage-only until XLSX / etc. extract |
 
 ---
 
@@ -105,7 +106,7 @@ npm run dev
 
 ### Happy path
 
-1. Upload a short **text PDF** or `.txt` in **My documents**  
+1. Upload a short **text PDF**, **`.docx`**, or `.txt` in **My documents**  
 2. Wait for **`indexed`**  
 3. New chat → add files (panel above messages) → **check** the ones to use  
 4. Wait for **Indexed** if needed → ask a question → answer **streams**  
@@ -116,7 +117,7 @@ npm run dev
 
 | Path | Responsibility |
 |------|----------------|
-| `lib/text-extract.ts` | Text + async PDF extract entry |
+| `lib/text-extract.ts` | Text + async PDF + DOCX (Mammoth) extract |
 | `lib/pdf-extract-client.ts` | HTTP client for pdf-extract service |
 | `lib/gemini.ts` | Embeddings + Interactions stream |
 | `lib/qdrant.ts` | Collection, upsert, search |
@@ -133,7 +134,7 @@ npm run dev
 
 | Item | Notes |
 |------|--------|
-| DOCX / XLSX full extract | Later (after PDF path stable) |
+| XLSX full extract | Later |
 | Click source → open chunk / document | Optional polish |
 | Stop / regenerate | Chat controls |
 

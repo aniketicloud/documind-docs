@@ -11,7 +11,8 @@ Canonical plan: **[Development → Product roadmap](./content/docs/development/r
 | F1 Text PDF (PyMuPDF) | Done |
 | **F1b PDF OCR (Tesseract)** | **Done** |
 | **Sources footer** | **Done** |
-| DOCX | Later (when PDF stable) |
+| **DOCX** (`.docx` / Mammoth) | **Done** |
+| XLSX | Later |
 | D Hardening | Open |
 
 ## Daily run

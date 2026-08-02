@@ -47,9 +47,11 @@ You do **not** need a separate terminal for ingest. The Compose service **`inges
 | Format | Extractor | Chat/RAG when indexed |
 |--------|-----------|------------------------|
 | `.txt`, `.md`, `.csv`, `.rtf` | Node (UTF-8) | Yes |
+| **`.docx`** (Word) | Node **Mammoth** (in worker, no Docker) | Yes if text found; else **`failed`** |
 | **Text-based PDF** (selectable text) | Docker **`pdf-extract`** (PyMuPDF, fast) | Yes |
 | **Scanned / image PDF** | Same service → page images → **Tesseract OCR** when `PDF_OCR_MODE=auto` | Yes if OCR finds text; else **`failed`** |
-| DOCX / XLSX (binary) | Not fully extracted yet | Storage only / no vectors |
+| Legacy `.doc` | Not supported | **`failed`** — save as `.docx` |
+| XLSX / XLS / ODT / ODS | Not extracted yet | Storage only / no vectors |
 
 ---
 
@@ -146,6 +148,8 @@ sequenceDiagram
     W->>PDF: POST /extract?ocr=auto
     Note over PDF: PyMuPDF first; OCR if needed
     PDF-->>W: text
+  else DOCX
+    W->>W: Mammoth extractRawText
   else txt/md/csv
     W->>W: extract UTF-8
   end
@@ -156,13 +160,21 @@ sequenceDiagram
 
 ---
 
-## Happy path (text PDF or .txt)
+## Happy path (text PDF, .docx, or .txt)
 
 1. `docker compose up -d` + `npm run dev`  
-2. **My documents** → upload a text PDF or `.txt`  
+2. **My documents** → upload a text PDF, **`.docx`**, or `.txt`  
 3. Badge: **processing** → **indexed**  
 4. **New chat** → add file to the **documents panel** → leave it **checked**  
 5. When status is **Indexed**, ask → streamed answer from RAG  
+
+### Word (`.docx`)
+
+- Extracted **inside the Node worker** with **[Mammoth](https://github.com/mwilliamson/mammoth.js)** (no extra container).  
+- Rebuild the worker image after pulling DOCX changes:  
+  `docker compose up -d --build ingest-worker`  
+- Legacy **`.doc`** is rejected with a clear error — export as `.docx` and re-upload or reprocess.  
+- Image-only or empty Word files → **`failed`**.
 
 ### Scanned PDF (OCR)
 
@@ -184,7 +196,8 @@ Plain-language OCR explanation: [PDF extract & OCR](/docs/guide/pdf-extract).
 | **F1** | Text-based PDF via PyMuPDF | Done |
 | **F1b** | OCR for scanned PDFs (Tesseract, free/local) | Done |
 | **S** | Sources footer | Done |
-| **DOCX** | Word extract | Next when PDF path is stable |
+| **DOCX** | Word `.docx` via Mammoth | **Done** |
+| **XLSX** | Spreadsheet extract | Later |
 
 ---
 

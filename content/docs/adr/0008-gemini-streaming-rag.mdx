@@ -75,13 +75,13 @@ PDF/DOCX parsers deferred to Option **F**. Unsupported types may still reach sto
 ### Negative / trade-offs
 
 - Free-tier rate limits and sequential embeds slow large files  
-- Word/XLSX content still not fully searchable (PDF + OCR done)  
+- XLSX / legacy `.doc` still not fully searchable (PDF + OCR + DOCX done)  
 - Stream body stays plain text; citations are persisted on the message and loaded with chat (not framed as stream events)  
 - Gemini API key must be rotated if ever pasted into chat or logs  
 
 ### Follow-ups
 
-- DOCX / XLSX parsers  
+- XLSX parsers
 - Optional click-through from source chip → document  
 - Option **D** — rate limits, secret management, deploy  
 
